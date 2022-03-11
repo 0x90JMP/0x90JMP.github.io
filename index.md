@@ -1,6 +1,6 @@
 ## Welcome to GitHub Pages
 
-[Blog](https://0xd4vid.github.io)
+[Blog](https://0xd4vid.github.io/blog/)
 
 You can use the [editor on GitHub](https://github.com/0xD4vid/0xD4vid.github.io/edit/main/index.md) to maintain and preview the content for your website in Markdown files.
 
