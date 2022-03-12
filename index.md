@@ -1,6 +1,21 @@
-## Welcome to GitHub Pages
+## 0xD4vid - Some Network Security Posts
 
-* [Blog](https://0xd4vid.github.io/blog/)
+### Overview 
+
+This site includes, my own personal thoughts on the basics of Cybersecurity. You will find walkthroughs, research, cert reviews and maybe concept discussion. I have also added some basic privilege escalation cheatsheets along with commands. xxxxx
+
+
+
+## Recent Blog Posts
+
+* [AV Evasion, Process Hollowing](https://0xd4vid.github.io/blog/)
+* [HTB Mantis Walkthrough](https://0xd4vid.github.io/blog/)
+* [Python3 Simple Crypter](https://0xd4vid.github.io/blog/)
+
+## Basic Privilege Escalation Cheatsheets 
+
+* [Linux Privilege Escalation](https://0xd4vid.github.io/blog/)
+* [Windows Privilege Escalation](https://0xd4vid.github.io/blog/)
 
 You can use the [editor on GitHub](https://github.com/0xD4vid/0xD4vid.github.io/edit/main/index.md) to maintain and preview the content for your website in Markdown files.
 
