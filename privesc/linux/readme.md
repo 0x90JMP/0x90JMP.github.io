@@ -7,9 +7,9 @@ We can then look for some missconfigurations, we can look for cron jobs and auto
 
 lastly, we will take a look at kernel exploits for the kernel and Operation system version. Are there any updates that the system needs, are there any tools to compile possible Kernel exploits.
 
-### Searching For Fast Privesc
+## Upgarding The Terminal
 
-When we gain access to the target system, we can upgrade or terminal if needed.
+When we gain access to the target system, we can upgrade or terminal if needed. Entering the commands below is an easy way to get our terminal the way we want.
 
 ```
 python3 -c 'import pty; pty.spawn("/bin/bash")'
@@ -22,7 +22,9 @@ stty raw -echo ; fg ; reset
 export SHELL=/bin/bash; export TERM=screen; stty rows 38 columns 211; reset
 ```
 
-In the shell we can start looking for some fast ways to escalate privileges. We start by running a few commands. We'll search for the current users groups, sudo privileges and take a look at to see if we can write to any interesting files.  
+## Searching For Quick Wins
+
+We can start looking for some fast ways to escalate privileges. We'll search for the current users groups, sudo privileges and take a look at to see if we can write to any interesting files.  
 
 User groups: is there anything interesting there? e.g. sudo, wheel, docker, adm, ldx
 ```
