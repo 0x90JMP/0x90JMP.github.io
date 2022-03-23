@@ -7,7 +7,7 @@ We can then look for some missconfigurations, we can look for cron jobs and auto
 
 lastly, we will take a look at kernel exploits for the kernel and Operation system version. Are there any updates that the system needs, are there any tools to compile possible Kernel exploits.
 
-## **Searching For Fast Privesc**
+### Searching For Fast Privesc
 
 When we gain access to the target system, we can upgrade or terminal if needed.
 
