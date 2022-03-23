@@ -24,12 +24,12 @@ export SHELL=/bin/bash; export TERM=screen; stty rows 38 columns 211; reset
 
 In the shell we can start looking for some fast ways to escalate privileges. We start by running a few commands. We'll search for the current users groups, sudo privileges and take a look at to see if we can write to any interesting files.  
 
-* User groups: is there anything interesting there? e.g. sudo, wheel, docker, adm, ldx
+User groups: is there anything interesting there? e.g. sudo, wheel, docker, adm, ldx
 ```
 id 
 ```
 
-* Lets then look to see if the current user can run any commands with elevated privileges.
+Lets then look to see if the current user can run any commands with elevated privileges.
 ```
 sudo -l
 ```
