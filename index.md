@@ -1,4 +1,4 @@
-### About 
+## About 
 
 This site includes, my own personal thoughts on the basics of Cybersecurity. You will find walkthroughs, research, cert reviews and maybe concept ideas. I have also added some basic privilege escalation cheatsheets along with commands. 
 
