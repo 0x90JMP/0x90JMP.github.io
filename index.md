@@ -6,7 +6,7 @@ This is not a place for discussion, but a place to add topics and information th
 
 ## Blog Posts
 
-* [Python3 AES/XOR Encryption Script](https://0xd4vid.github.io/)
+* [Python3 Crypter AES/XOR](https://0xd4vid.github.io/pythonAesXor/)
 
 ## Walkthroughs 
 
