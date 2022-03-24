@@ -50,7 +50,7 @@ IntPtr hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, addr, IntPtr.Zero,
 We build this C# code and uploaded to [AntiScan.me](https://antiscan.me/). The results show that our code is detected by 10/26 of the antivirus scans performed. We can now create the python3 Crypter and try to lower this detection rate.
 
 
-![Image](/images/pythonAES/Initial-scan.jpg)
+![Image](Initial-scan.jpg)
 ```
 <img src="Initial-scan.jpg" alt="drawing" width="900"/>
 ```
