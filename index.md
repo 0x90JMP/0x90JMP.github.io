@@ -6,10 +6,13 @@ This is not a place for discussion, but a place to add topics and information th
 
 ## Blog Posts
 
-* [Basic Linux Privilege Escalation](https://0xd4vid.github.io/blog/linux_privesc/)
 * [Python3 AES/XOR Encryption Script](https://0xd4vid.github.io/)
 
 ## Walkthroughs 
 
 * [Some HTB Box](https://0xd4vid.github.io/)
 * [Some THM Room](https://0xd4vid.github.io/)
+
+## Cheatsheet 
+
+* [Basic Linux Privilege Escalation](https://0xd4vid.github.io/cheatsheet/linux_privesc/)
