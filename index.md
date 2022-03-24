@@ -6,7 +6,8 @@ This is not a place for discussion, but a place to add topics and information th
 
 ## Blog Posts
 
-* [Python3 Simple Crypter](https://0xd4vid.github.io/)
+* [Basic Linux Privilege Escalation](https://0xd4vid.github.io/blog/linux_privesc/)
+* [Python3 AES/XOR Encryption Script](https://0xd4vid.github.io/)
 
 ## Walkthroughs 
 
