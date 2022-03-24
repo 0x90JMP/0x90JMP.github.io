@@ -1,6 +1,6 @@
 # Basic Privilege Escalation And Enumeration
 
-### Overview
+## Overview
 
 This is just a few basic searches we can do when we first gain a foothold on the target system. We will first look for some quick wins and then move onto searching for interesting files in common directories, along with searches for passwords and credentials.
 
