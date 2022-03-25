@@ -229,9 +229,14 @@ We catch the connection in msfconsole and confirm the PID. We now have a termina
 
 ![catch](catch-shell.png)
 
-## Final Thoughts
+## Conclusion
 
 This has worked well, but is far from a complete solution in terms of trying to bypass antiviruses. This is just an example of the changes in the detection rate, when encrypting our shellcode payload.  
+
+[Back To Blog](https://0xd4vid.github.io/)
+
+### References to source code
+
 
 
 
