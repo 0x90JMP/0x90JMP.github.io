@@ -2,7 +2,7 @@
 
 ## Overview
 
-We will create a simple python3 Crypter. The script will take raw shell code, in hex string format and encrypt it with AES or XOR encryption. The encrypted shell code will finally be encoded into a base64 string, ready to be used in a C# process injection executable, as a proof of concept.
+We will create a simple python3 Crypter. The script will take raw shell code, in hex string format and encrypt it with AES encryption. The encrypted shell code will finally be encoded into a base64 string, ready to be used in a C# process injection executable, as a proof of concept.
 
 In this example, we will aim to reduce our detection rate on [AntiScan.me](https://antiscan.me/). We will use a basic process injection technique, by calling native DLLs with P/Invoke. This technique is not advanced and will not completely bypass antivirus detection, but it should show reductions in detection rates.
 
@@ -232,3 +232,7 @@ We catch the connection in msfconsole and confirm the PID. We now have a termina
 ## Final Thoughts
 
 This has worked well, but is far from a complete solution in terms of trying to bypass antiviruses. This is just an example of the changes in the detection rate, when encrypting our shellcode payload.  
+
+
+
+
