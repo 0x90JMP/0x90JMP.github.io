@@ -1,8 +1,8 @@
 ## About 
 
-These are my own personal thoughts on the basics of Cybersecurity. You will find walkthroughs, research, cert reviews and other topics. I have also added some basic privilege escalation cheatsheets.. 
+These are my own personal thoughts on the basics of Cybersecurity. You will find walkthroughs, research, cert reviews and other topics. I have also added some basic privilege escalation cheatsheets.
 
-This is not a place for discussion, but a place to add topics and information that I have found interestiing and post the things I feel have helped in my progress. The idea is that maybe something on here will help someone else on their path. 
+This is not a place for discussion, but a place to add topics and information things that I have found interestiing and post the things I feel have helped in my progress. The idea is that maybe something on here will help someone else on their path. 
 
 ## Blog Posts
 
