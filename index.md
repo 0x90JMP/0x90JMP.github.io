@@ -2,7 +2,7 @@
 
 These are my own personal thoughts on the basics of Cybersecurity. You will find walkthroughs, research, cert reviews and other topics. I have also added some basic privilege escalation cheatsheets.
 
-This is not a place for discussion, but a place to add topics and information on things that I have found interestiing. I'll post things that I feel have helped in my progress. The idea is that maybe something on here will help someone else on their path. 
+This is a place for discussion on topics that I have found interestiing. I'll also post things that I feel have helped in my progress. The idea is that maybe something on here will help someone else on their path. 
 
 ## Blog Posts
 
