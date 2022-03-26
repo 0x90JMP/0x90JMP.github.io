@@ -75,6 +75,10 @@ def shell_format():
     return output.stdout
 ```
 
+Below is the output from the msfvenom command, when run in the Linux terminal. The hex string is what we will save to our 'output' variable.
+
+![msf](msf-hex.png)
+
 ## Encrypting The Shell Code
 
 With our returned hex shell code (output.stdout), we will call the function 'aes_encrypt_shellcode(data)' and pass the msfvenom command as data. The following function will assemble the pieces needed to encrypt our data variable.
