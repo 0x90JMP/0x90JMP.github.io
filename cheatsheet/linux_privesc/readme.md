@@ -227,7 +227,7 @@ program -v
 # Debian
 dpkg -l | grep "name"
 
-# rpm systemes
+# rpm systems
 rpm -aq | grep "name"
 ```
 
