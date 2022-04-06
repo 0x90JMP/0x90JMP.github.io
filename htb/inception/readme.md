@@ -169,7 +169,7 @@ We decode the string with the following base64 command and confirm the reading o
 
 ![image](passwd-output.png)
 
-## Enumeration Of The Target
+## Information Gathering On The Target
 
 There was a lot of searching to be done on this box, but when we started checking web server configuration files, we came across an interesting find. 
 
