@@ -87,7 +87,7 @@ The requests are both successful as we see from the 200 Ok as well as the HTML o
 
 ![image](curl-proxy-80.png)
 
-### Scanning with python
+### Port scanning with python
 
 Looking at the output from proxychains and curl, we can automate this task and search of any other accessible services on the target system. We will create a simple python script that will try to connect to other ports.
 
