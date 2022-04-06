@@ -10,7 +10,7 @@ I will also post things that I feel have helped in my progress. The idea is that
 
 ## Walkthroughs 
 
-* [Some HTB Box](https://0xd4vid.github.io/)
+* [HTB Inception](https://0xd4vid.github.io/htb/inception/)
 
 ## Cheatsheet 
 
