@@ -238,10 +238,6 @@ curl -u webdav_tester:babygurl69 'http://10.129.1.104/webdav_test_inception/shel
 
 ![image](confirm-execution.png)
 
-## Target Enumeration
-
-After a lot of trying, we are unable to get a reverse shell back to our Kali machine. We are unable to get any kind of connection back to Kali.
-
 ## Automate our Remote Code Execution With Python
 
 The following python script runs commands on the target with the curl command used previously. It uses hURL to url encode the commands. The while loop gives us a feeling of a shell and lets us send commands a little faster.
