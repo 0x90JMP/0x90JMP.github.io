@@ -466,7 +466,7 @@ APT update is running every 5 minutes. I take a look on gtfobins for information
 
 ![image](gtfobins.png)
 
-Searching a little more into this I search google for 'apt run pre commands'. I come across a post on stackexchange https://unix.stackexchange.com/questions/204414/how-to-run-a-command-before-download-with-apt-get . The post mentions the pre-invoke command being executed from the /apt.conf.d/ directory. 
+Searching a little more into this I search google for 'apt run pre commands'. I come across a post on [stackexchange](https://unix.stackexchange.com/questions/204414/how-to-run-a-command-before-download-with-apt-get). The post mentions the pre-invoke command being executed from the /apt.conf.d/ directory. 
 
 ```
 $ sudo cat /etc/apt/apt.conf.d/05new-hook
