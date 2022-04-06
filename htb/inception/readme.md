@@ -70,7 +70,7 @@ Connecting to the http://10.129.1.104:3128/ url offers nothing of interest to us
 
 ### Finding possible Services
 
-Editing the proxychains configuration file at /etc/proxychains4.conf we add the following line. Forward http to 10.129.1.104 on port 3128
+Editing the proxychains configuration file at /etc/proxychains4.conf we add the following line. Forward to http 10.129.1.104 on port 3128.
 
 ```
 http 10.129.1.104 3128
@@ -87,14 +87,14 @@ The requests are both successful as we see from the 200 Ok as well as the HTML o
 
 ![image](curl-proxy-80.png)
 
-### Port scanning with python
+### Port scanning with python and curl
 
-Looking at the output from proxychains and curl, we can automate this task and search of any other accessible services on the target system. We will create a simple python script that will try to connect to other ports.
+We will automate proxychains curl command and search of any other accessible services on the target system. We will create a simple python script that will try to connect to other ports.
 
 As we saw from the successful request on port 80, proxychains output states:
 
 ```
-Strict chain  ...  10.129.1.104:80  ...  127.0.0.1:3128  ...  OK
+[proxychains] Strict chain  ...  10.129.1.104:80  ...  127.0.0.1:3128  ...  OK
 ```
 
 For an unsuccessful request, the output states:
@@ -103,7 +103,7 @@ For an unsuccessful request, the output states:
 [proxychains] Strict chain  ...  10.129.1.104:3128  ...  127.0.0.1:25 <--denied
 ```
 
-This is key to our confirmation of a possible open port, for when we split this output a successful request will have more elements saved to our list.
+This is key to our confirmation of a possible open port, for when we split this output a successful request will have more elements saved to our list (Python spli() returns a list).
 
 The script runs the proxychans command for every port in the range of 1 to 1024 for the first attempt.
 
