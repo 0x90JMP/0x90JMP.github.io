@@ -14,7 +14,7 @@ Starting off with our nmap all ports, we discover that TCP ports 80 and 3128 are
 
 ## TCP 80 HTTP Enumeration
 
-### Enumeration commands
+### Gathering information
 
 Looking at the web technology with curl we don't find anything that jumps out to us.
 
