@@ -352,7 +352,8 @@ A quick search with netstat shows no MySQL on localhost, but there are two conne
 
 With no MySQL to connect to we will use the password found in wp-config.php and try to su to user root or cobb. We login as user cobb with the following command.
 
-```su - cobb
+```
+su - cobb
 Password: VwPddNh7xMZyDQoByQL4
 ```
 
