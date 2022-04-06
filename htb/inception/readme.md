@@ -143,13 +143,13 @@ proxychains ssh root@127.0.0.1
 
 We can add the availability of port 22 to our notes. No other services were found so we will continue on.
 
-## Vulnerability research: 
+## Vulnerability research 
 
 Looking back at our notes we search a little deeping in regards to dompdf. Seacrhsploit results reveal an exploit matching the version number we found in /dompdf
 
 ![image](searchsploit.png)
 
-## Exploitation: Arbitrary File Read
+## Exploitation Via Arbitrary File Read
 
 ### POC 
 
@@ -327,7 +327,7 @@ grep --color=auto -rnw '/var/www/html/' -ie "DB_PASSWORD" --color=always 2> /dev
 
 ![image](wp-password.png)
 
-The content of /var/www/html/wordpress_4.8.3/wp-config.php reveal MySQL credentials of:
+The content of /var/www/html/wordpress_4.8.3/wp-config.php reveals MySQL credentials.
 
 ```
 // ** MySQL settings - You can get this info from your web host ** //
@@ -348,7 +348,7 @@ A quick search with netstat shows no MySQL on localhost, but there are two conne
 
 ![image](netstat-mysql.png)
 
-### Password reuse
+## Password reuse
 
 With no MySQL to connect to we will use the password found in wp-config.php and try to su to user root or cobb. We login as user cobb with the following command.
 
