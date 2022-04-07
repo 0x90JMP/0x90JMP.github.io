@@ -136,7 +136,7 @@ def base64_encode(encrypted_data, IV, key):
     print(f"[>] KEY: {encoded_key.decode(('utf-8'))}")
 
     encoded = base64.b64encode(encrypted_data)
-    print(f"[>] Shell Code: {encoded.decode('utf-8')}")
+    print(f"[>] Shellcode: {encoded.decode('utf-8')}")
 ```
 
 ## Testing The Script On Kali Linux
