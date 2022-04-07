@@ -344,7 +344,7 @@ define('DB_PASSWORD', 'VwPddNh7xMZyDQoByQL4');
 define('DB_HOST', 'localhost');
 ```
 
-A quick search with netstat shows no MySQL on localhost, but there are two connections from 192.168.0.10 that stand out. We will add that IP to our notes.
+A quick search with netstat shows no MySQL on localhost, but there are connections from the 192.168.0.0/24 that stand out. We will add the IP's to our notes.
 
 ![image](netstat-mysql.png)
 
