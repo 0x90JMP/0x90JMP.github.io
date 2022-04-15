@@ -2,10 +2,6 @@
 
 ![Image](Inception.png)
 
-## Overview
-
-[link](http://127.0.0.1)
-
 ## Initial Scan
 
 Starting off with our nmap all ports, we discover that TCP ports 80 and 3128 are open. We discover that HTTP and Squid Proxy are running on the target system.
