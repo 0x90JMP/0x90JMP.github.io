@@ -11,7 +11,3 @@ I will also post things that I feel have helped in my progress. The idea is that
 ## Walkthroughs 
 
 * [HTB Inception](https://0xd4vid.github.io/htb/inception/)
-
-## Cheatsheet 
-
-* [Basic Linux Privilege Escalation Cheatsheet](https://0xd4vid.github.io/cheatsheet/linux_privesc/)
