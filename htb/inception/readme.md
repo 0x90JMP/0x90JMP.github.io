@@ -302,11 +302,11 @@ We upgrade our shell and continue our search.
 
 ```
 python3 -c 'import pty; pty.spawn("/bin/bash")'
+Ctrl + Z (Background Process.)
+stty raw -echo ; fg
 export TERM=xterm-256color
 alias ll='ls -lsaht --color=auto'
-Ctrl + Z (Background Process.)
-stty raw -echo ; fg ; reset
-export SHELL=/bin/bash; export TERM=screen; stty rows 23 columns 139; reset
+stty rows 23 columns 139; reset
 ```
 
 ![image](upgrade-shell.png)
