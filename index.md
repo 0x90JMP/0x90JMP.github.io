@@ -1,8 +1,8 @@
 ## About 
 
-You might find walkthroughs, cert reviews and other topics that I have found interesting.
+You might find walkthroughs, cert reviews and topics that I have found interesting.
 
-I will also post things that I feel have helped in my progress. The idea is that maybe something on here will help someone else on their path. 
+I might post things that I feel have helped in my progress. The idea is that maybe something on here will help someone else on their path. 
 
 ## Blog Posts
 
