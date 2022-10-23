@@ -49,7 +49,7 @@ We will take a look at the landing pages source code. Right clicking and inspect
 
 ### dompdf 
 
-[dompdf](https://github.com/dompdf/dompdf)
+Search for 'dompdf', we find that 'dompdf' is an HTML to PDF converter. [github dompdf](https://github.com/dompdf/dompdf)
 
 We'll test to see if /dompdf/ exists and it does.
 
