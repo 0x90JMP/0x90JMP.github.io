@@ -1,3 +1,4 @@
-theme: jekyll-theme-hacker
+# theme: jekyll-theme-hacker
+remote_theme: b2a3e8/jekyll-theme-console
 title: Some Random Blog
 description: Network Security Posts
