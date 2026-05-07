@@ -24,7 +24,7 @@ The agent disguises itself with a legitimate-sounding process name - in this cas
 
 With this foothold established, the attacker can now run specialised tools against the machine. One of those tools is `entra_reaper`.
 
-![The Havoc C2 console showing a new agent session checking in, with the process name listed as MicrosoftEdgeUpdate.exe](01_havoc_agent_session.png)
+![The Havoc C2 console showing a new agent session checking in, with the process name listed as MicrosoftEdgeUpdate.exe](taskman.png)
 *The moment the agent connects back to the attacker's server. Note the process name — from here, the attacker has full remote control of the victim machine.*
 
 ## What Is a BOF?
