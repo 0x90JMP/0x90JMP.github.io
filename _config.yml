@@ -5,7 +5,7 @@ description: "Posts about stuff"
 
 # URL Settings (Crucial for fixing broken links)
 url: "https://github.io"
-baseurl: "/your-repository-name" # Use "" if repo is named your-github-username.github.io
+baseurl: "" # Use "" if repo is named your-github-username.github.io
 
 # Build Settings
 markdown: kramdown
