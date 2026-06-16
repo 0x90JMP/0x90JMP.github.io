@@ -5,10 +5,9 @@ You might find walkthroughs, cert reviews and topics that I have found interesti
 The idea is that maybe something on here will help someone else on their path. 
 
 ## Blog Posts
-
-* [Python3 AES Encrypted Shellcode Script](https://0x90JMP.github.io/blog/pythonAesXor/)
-* [Stealing Azure Tokens](https://0x90JMP.github.io/Stealing_Azure_Tokens/)
+* [Stealing Azure Tokens (2026)](https://0x90JMP.github.io/Stealing_Azure_Tokens/)
+* [Python3 AES Encrypted Shellcode Script (2022)](https://0x90JMP.github.io/blog/pythonAesXor/)
 
 ## Walkthroughs 
 
-* [HTB Inception](https://0x90JMP.github.io/htb/inception/)
+* [HTB Inception (2022)](https://0x90JMP.github.io/htb/inception/)
