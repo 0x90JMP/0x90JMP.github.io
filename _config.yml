@@ -1,12 +1,13 @@
-# Site Settings
-theme: hacker
+theme: jekyll-theme-hacker
 title: "Some Random Blog"
 description: "Posts about stuff"
 
-# URL Settings (Crucial for fixing broken links)
+# 1. Add your identity for SEO and RSS feeds
+author: "0x90JMP"
 url: "https://github.io"
-baseurl: "" # Use "" if repo is named your-github-username.github.io
+baseurl: ""
 
-# Build Settings
-markdown: kramdown
-highlighter: rouge
+# 2. Enable plugins (Supported natively by GitHub Pages)
+plugins:
+  - jekyll-seo-tag
+  - jekyll-feed
