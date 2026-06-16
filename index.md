@@ -7,7 +7,7 @@ The idea is that maybe something on here will help someone else on their path.
 ## Blog Posts
 
 * [Python3 AES Encrypted Shellcode Script](https://0x90JMP.github.io/blog/pythonAesXor/)
-* [Python3 AES Encrypted Shellcode Script](https://0x90JMP.github.io/Stealing_Azure_Tokens/)
+* [PSTealing Azure Tokens](https://0x90JMP.github.io/Stealing_Azure_Tokens/)
 
 ## Walkthroughs 
 
