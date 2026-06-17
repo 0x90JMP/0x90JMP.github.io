@@ -6,7 +6,7 @@ The idea is that maybe something on here will help someone else on their path.
 
 ## Blog Posts
 * [Stealing Azure Tokens (2026)](https://0x90JMP.github.io/Stealing_Azure_Tokens/)
-* [Python3 AES Encrypted Shellcode Script (2022)](https://0x90JMP.github.io/blog/pythonAesXor/)
+* [Encrypted Shellcode (2022)](https://0x90JMP.github.io/blog/pythonAesXor/)
 
 ## Walkthroughs 
 
