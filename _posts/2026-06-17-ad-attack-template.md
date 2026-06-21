@@ -1,6 +1,6 @@
 ---
 title: "Template: Active Directory Attack Post"
-date: 2026-06-17 00:00:00 +0000
+date: 2040-06-17 00:00:00 +0000
 categories: [Active Directory, Lateral Movement]
 tags: [active-directory, kerberos, lateral-movement, windows, impacket]
 toc: true

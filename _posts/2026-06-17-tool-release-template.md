@@ -1,6 +1,6 @@
 ---
 title: "Template: Tool Release Post"
-date: 2026-06-17 00:00:00 +0000
+date: 2040-06-17 00:00:00 +0000
 categories: [Tools & Tradecraft]
 tags: [tool-release, csharp, windows, open-source]
 toc: true

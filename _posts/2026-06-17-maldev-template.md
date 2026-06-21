@@ -1,6 +1,6 @@
 ---
 title: "Template: Malware Development Post"
-date: 2026-06-17 00:00:00 +0000
+date: 2040-06-17 00:00:00 +0000
 categories: [Malware Development, Loaders]
 tags: [csharp, shellcode, injection, windows, evasion]
 toc: true

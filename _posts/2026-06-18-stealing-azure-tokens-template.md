@@ -8,8 +8,6 @@ toc: true
 
 # Stealing Azure Tokens Without Touching Microsoft’s Authentication Infrastructure
 
-*Posted 9th May 2026*
-
 ## Persistent Tokens
 
 Multi‑factor authentication (MFA) is now standard. Password complexity policies are enforced. NTLM is being phased out. The implicit assumption behind all of this is that the attacker is trying to get your password—when in fact, they don’t need it.
