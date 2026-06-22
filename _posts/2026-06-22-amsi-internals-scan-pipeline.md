@@ -242,7 +242,7 @@ No byte of `amsi.dll` is modified at any point.
 | AmsiOpenSession / AmsiScanBuffer patch | **Yes** | **Yes** | VirtualProtect on module page |
 | Hardware breakpoint (Part 2) | **No** | **No** | `SetThreadContext` with DR registers non-zero |
 
-The full implementation — DR7 enable bit layout, `SetThreadContext` from a thread you control, VEH registration order, reading `CONTEXT.Rsp` to recover the argument stack, and skipping the function cleanly — is covered in **AMSI Bypass Part 2: Hardware Breakpoints**.
+The full implementation — DR7 enable bit layout, `SetThreadContext` from a thread you control, VEH registration order, reading `CONTEXT.Rsp` to recover the argument stack, and skipping the function cleanly — is covered in **[AMSI Bypass: Hardware Breakpoints](/posts/amsi-bypass-hardware-breakpoints/)**.
 
 ---
 
@@ -266,4 +266,4 @@ The full implementation — DR7 enable bit layout, `SetThreadContext` from a thr
 
 **Related posts:**
 - [Stealing Azure Tokens](/posts/stealing-azure-tokens-template/)
-- AMSI Bypass Part 2: Hardware Breakpoints *(coming soon)*
+- [AMSI Bypass: Hardware Breakpoints](/posts/amsi-bypass-hardware-breakpoints/)
