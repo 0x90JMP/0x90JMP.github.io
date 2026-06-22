@@ -1,6 +1,6 @@
 ---
-title: "AMSI Bypass: Hardware Breakpoints"
-date: 2026-06-22 00:00:00 +0000
+title: "AMSI Bypass Part 2: Hardware Breakpoints"
+date: 2026-05-15 00:00:00 +0000
 categories: [AV/EDR Bypass, AMSI]
 tags: [amsi, bypass, hardware-breakpoints, csharp, veh, setthreadcontext, dotnet, windows]
 toc: true
@@ -233,4 +233,4 @@ MDE collects thread context data through kernel callbacks and ETW, but hardware 
 - [MITRE ATT&CK T1562.001 — Disable or Modify Tools](https://attack.mitre.org/techniques/T1562/001/)
 
 **Related posts:**
-- [AMSI Internals: The Full Scan Pipeline](/posts/amsi-internals-scan-pipeline/)
+- [AMSI Internals Part 1: The Full Scan Pipeline](/posts/amsi-internals-scan-pipeline/)

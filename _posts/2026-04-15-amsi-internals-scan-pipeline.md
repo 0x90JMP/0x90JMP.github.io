@@ -1,6 +1,6 @@
 ---
-title: "AMSI Internals: The Full Scan Pipeline"
-date: 2026-06-22 00:00:00 +0000
+title: "AMSI Internals Part 1: The Full Scan Pipeline"
+date: 2026-04-15 00:00:00 +0000
 categories: [AV/EDR Bypass, AMSI]
 tags: [amsi, internals, windbg, frida, powershell, windows, hardware-breakpoints, debugging, dotnet]
 toc: true
@@ -242,7 +242,7 @@ No byte of `amsi.dll` is modified at any point.
 | AmsiOpenSession / AmsiScanBuffer patch | **Yes** | **Yes** | VirtualProtect on module page |
 | Hardware breakpoint (Part 2) | **No** | **No** | `SetThreadContext` with DR registers non-zero |
 
-The full implementation — DR7 enable bit layout, `SetThreadContext` from a thread you control, VEH registration order, reading `CONTEXT.Rsp` to recover the argument stack, and skipping the function cleanly — is covered in **[AMSI Bypass: Hardware Breakpoints](/posts/amsi-bypass-hardware-breakpoints/)**.
+The full implementation — DR7 enable bit layout, `SetThreadContext` from a thread you control, VEH registration order, reading `CONTEXT.Rsp` to recover the argument stack, and skipping the function cleanly — is covered in **[AMSI Bypass Part 2: Hardware Breakpoints](/posts/amsi-bypass-hardware-breakpoints/)**.
 
 ---
 
@@ -266,4 +266,4 @@ The full implementation — DR7 enable bit layout, `SetThreadContext` from a thr
 
 **Related posts:**
 - [Stealing Azure Tokens](/posts/stealing-azure-tokens-template/)
-- [AMSI Bypass: Hardware Breakpoints](/posts/amsi-bypass-hardware-breakpoints/)
+- [AMSI Bypass Part 2: Hardware Breakpoints](/posts/amsi-bypass-hardware-breakpoints/)
