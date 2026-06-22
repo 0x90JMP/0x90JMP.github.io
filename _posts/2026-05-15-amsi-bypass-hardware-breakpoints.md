@@ -1,6 +1,6 @@
 ---
 title: "AMSI Bypass Part 2: Hardware Breakpoints"
-date: 2026-05-15 00:00:00 +0000
+date: 2040-05-15 00:00:00 +0000
 categories: [AV/EDR Bypass, AMSI]
 tags: [amsi, bypass, hardware-breakpoints, csharp, veh, setthreadcontext, dotnet, windows]
 toc: true

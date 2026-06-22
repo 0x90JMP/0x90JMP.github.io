@@ -6,7 +6,7 @@ tags: [csharp, shellcode, injection, windows, evasion]
 toc: true
 ---
 
-# AES Encrypted Shellcode (Created 2022)
+# AES Encrypted Shellcode
 
 >This is to show how small changes made to malware can make a big difference. 
 
