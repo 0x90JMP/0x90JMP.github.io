@@ -1,6 +1,6 @@
 ---
 title: "AMSI Internals Part 1: The Full Scan Pipeline"
-date: 2026-04-15 00:00:00 +0000
+date: 2030-04-15 00:00:00 +0000
 categories: [AV/EDR Bypass, AMSI]
 tags: [amsi, internals, windbg, frida, powershell, windows, hardware-breakpoints, debugging, dotnet]
 toc: true
