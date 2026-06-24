@@ -15,9 +15,7 @@ This post tests the runtime assumption: when those API calls are actually made a
 **What this post covers:**
 - The four-layer Windows API model: Win32 → kernelbase → NT API → syscall
 - What forwarding thunks are and why kernel32 is mostly just jump tables
-- How some EDRs use inline hooks at the ntdll layer
-- The three most common hook patterns and what their bytes look like
-- A C# tool that reads function prologues and detects hooks live
+- How userland ntdll hooks work and why MDE uses a different approach
 - What MDE actually hooks in practice — and why it is not what most people expect
 - A live injection test against MDE: what fires and what does not
 
@@ -31,13 +29,13 @@ Windows API calls do not go directly to the kernel. They pass through a stack of
 flowchart TD
     A["<b>Your Code</b><br/>VirtualAllocEx(hProcess, ...)"] --> B
 
-    B["<b>kernel32.dll</b><br/>Forwarding thunk only<br/>48 FF 25 &rarr; kernelbase.dll<br/><i>No real implementation here</i>"]
+    B["<b>kernel32.dll</b><br/>Forwarding thunk only<br/>48 FF 25 → kernelbase.dll<br/><i>No real implementation here</i>"]
     B --> C
 
     C["<b>kernelbase.dll</b><br/>Actual Win32 implementation<br/>Parameter validation, type translation<br/><i>Calls ntdll equivalent</i>"]
     C --> D
 
-    D["<b>ntdll.dll</b><br/>NT API layer<br/>NtAllocateVirtualMemory<br/><i>Last stop in userland &mdash; syscall stub</i>"]
+    D["<b>ntdll.dll</b><br/>NT API layer<br/>NtAllocateVirtualMemory<br/><i>Last stop in userland — syscall stub</i>"]
     D --> E
 
     E["<b>syscall instruction</b><br/>CPU transitions to kernel mode<br/>Syscall number identifies the operation"]
@@ -100,145 +98,7 @@ This predictability is exactly what makes hook detection possible — and exactl
 
 ---
 
-## How Some EDRs Hook ntdll
-
-> **This section describes the userland inline hook approach used by products such as CrowdStrike Falcon, SentinelOne, and Carbon Black.** As the lab results below show, MDE does not use this mechanism for injection APIs — it operates at the kernel layer instead. The mechanism is worth understanding because it is widespread, and because the techniques in Parts 4–5 of this series are a direct response to it.
-
-When this class of EDR driver loads (at boot, before any user process starts), it maps a copy of ntdll and patches the first few bytes of selected functions. The patch overwrites the clean stub with a jump instruction that redirects execution to the EDR’s own handler in its userland DLL.
-
-**Before hooking — clean bytes:**
-
-```
-ntdll!NtAllocateVirtualMemory:
-  offset +0:  4C 8B D1          mov r10, rcx
-  offset +3:  B8 18 00 00 00    mov eax, 0x18
-  offset +8:  0F 05             syscall
-  offset +A:  C3                ret
-```
-
-**After hooking — patched by EDR:**
-
-```
-ntdll!NtAllocateVirtualMemory:
-  offset +0:  E9 AB CD EF 12    jmp 0x7FF...     ; ← redirected to EDR trampoline
-  offset +5:  00 00 00          (overwritten)
-  offset +8:  0F 05             syscall          ; (never reached via normal path)
-  offset +A:  C3                ret
-```
-
-The `E9` is a relative JMP. The EDR replaces the first 5 bytes of the stub with a jump to its own function. That function:
-1. Logs the call and its arguments
-2. Applies policy (allow / block / alert)
-3. Jumps back to the original bytes (saved in a trampoline) to complete the call if allowed
-
-```mermaid
-sequenceDiagram
-    participant Code as Your Code
-    participant K32 as kernel32.dll
-    participant NTDLL as ntdll.dll
-    participant EDR as EDR Handler (e.g. CrowdStrike)
-    participant Tramp as EDR Trampoline
-    participant Kernel as Kernel
-
-    Code->>K32: VirtualAllocEx(...)
-    K32->>NTDLL: NtAllocateVirtualMemory(...)
-    Note over NTDLL: First bytes patched: E9 XX XX XX XX
-    NTDLL->>EDR: jmp (inline hook fires)
-    EDR->>EDR: Inspect args, log telemetry
-    EDR->>Tramp: Call trampoline (original bytes)
-    Tramp->>Kernel: syscall 0x18
-    Kernel-->>Tramp: return
-    Tramp-->>EDR: return
-    EDR-->>K32: return
-    K32-->>Code: return
-```
-
-The caller never knows the detour happened. From the perspective of your code the call completed normally — but the EDR has already logged it.
-
----
-
-## The Three Common Hook Patterns
-
-Different EDR products use different JMP variants. The three most common:
-
-### Pattern 1: Relative JMP — `E9` (most common)
-
-```
-E9 XX XX XX XX    jmp <relative offset>
-```
-
-5 bytes. The target address is `current_address + 5 + offset`. Used by most commercial EDRs because it is compact.
-
-### Pattern 2: Indirect JMP — `FF 25` (absolute pointer)
-
-```
-FF 25 XX XX XX XX    jmp [rip + offset]
-```
-
-6 bytes. Jumps to an address stored at `rip + offset`. Used when the EDR DLL is loaded far from ntdll in virtual address space (relative offsets would not reach).
-
-### Pattern 3: MOV + JMP (absolute address, no indirection)
-
-```
-48 B8 XX XX XX XX XX XX XX XX    mov rax, <absolute addr>
-FF E0                             jmp rax
-```
-
-12 bytes. Largest footprint, hardest to miss. Used by some older or simpler hooking implementations.
-
-All three patterns overwrite the function prologue. All three are detectable by simply reading the first bytes of the function.
-
----
-
-## Detecting Hooks: Reading Function Prologues
-
-Hook detection does not require kernel access or special privileges. Every process can read its own memory with `ReadProcessMemory`. The approach:
-
-1. Call `GetModuleHandle` to get the base address of the loaded DLL
-2. Call `GetProcAddress` to get the address of each function to check
-3. Read the first 16 bytes of that address
-4. Compare byte[0] against known hook opcodes
-
-```csharp
-// Get the address of the function in the loaded DLL
-IntPtr hModule  = GetModuleHandle("ntdll.dll");
-IntPtr funcAddr = GetProcAddress(hModule, "NtAllocateVirtualMemory");
-
-// Read its first 16 bytes
-byte[] bytes = new byte[16];
-int bytesRead;
-ReadProcessMemory(GetCurrentProcess(), funcAddr, bytes, bytes.Length, out bytesRead);
-
-// Check for the three common patterns
-if (bytes[0] == 0xE9)
-    Console.WriteLine("[HOOKED] Inline JMP (E9) detected");
-
-else if (bytes[0] == 0xFF && bytes[1] == 0x25)
-    Console.WriteLine("[HOOKED] Indirect JMP (FF 25) detected");
-
-else if (bytes[0] == 0x48 && bytes[1] == 0xB8 && bytes[10] == 0xFF && bytes[11] == 0xE0)
-    Console.WriteLine("[HOOKED] MOV RAX + JMP (48 B8..FF E0) detected");
-
-else if (bytes[0] == 0x4C && bytes[1] == 0x8B && bytes[2] == 0xD1 && bytes[3] == 0xB8)
-    Console.WriteLine("[CLEAN]  Native syscall stub (4C 8B D1 B8)");
-```
-
-A clean ntdll function always starts with `4C 8B D1 B8` — `mov r10, rcx; mov eax, <SSN>`. If the first bytes do not match that pattern, the stub has been modified.
-
-Running this across all the security-sensitive Nt* functions maps out exactly what the EDR on that system is watching. Here is representative output from a system with an EDR that uses userland ntdll hooks:
-
-```
-[CLEAN]   ntdll!NtCreateFile            4C 8B D1 B8  ->  mov r10, rcx; mov eax, 0x55
-[CLEAN]   ntdll!NtReadFile              4C 8B D1 B8  ->  mov r10, rcx; mov eax, 0x06
-[HOOKED]  ntdll!NtAllocateVirtualMemory E9 AB CD EF  ->  jmp 0x7FFBCD123456
-[HOOKED]  ntdll!NtWriteVirtualMemory    E9 12 34 56  ->  jmp 0x7FFBCD456789
-[HOOKED]  ntdll!NtCreateThreadEx        E9 78 9A BC  ->  jmp 0x7FFBCD789012
-[CLEAN]   ntdll!NtCreateKey             4C 8B D1 B8  ->  mov r10, rcx; mov eax, 0x1D
-```
-
-Products that use this approach (CrowdStrike Falcon, SentinelOne, Carbon Black) hook the injection-relevant ntdll functions and leave file and registry operations clean. That pattern immediately reveals what the EDR considers high-risk.
-
-Now compare that to what MDE does.
+Some EDRs — CrowdStrike Falcon, SentinelOne, Carbon Black — address this by patching the first bytes of ntdll function stubs at process start, replacing the clean `4C 8B D1 B8` prologue with a JMP into their own handler. Every Nt* call then passes through the EDR before reaching the kernel, giving it full argument inspection and blocking capability. Techniques like direct syscalls and ntdll unhooking exist specifically to bypass this mechanism. MDE takes a different approach.
 
 ---
 
@@ -310,12 +170,12 @@ Unhooking ntdll removes the userland hooks from the second column. Against MDE, 
 Return to the four-step injector from Part 1:
 
 ```
-VirtualAllocEx → WriteProcessMemory → CreateRemoteThread
+VirtualAllocEx WriteProcessMemory CreateRemoteThread
 ```
 
 Each of those kernel32 functions calls through kernelbase into an ntdll equivalent:
 
-| kernel32 | → kernelbase | → ntdll | MDE watches via |
+| kernel32 | kernelbase | ntdll | MDE watches via |
 |---|---|---|---|
 | `VirtualAllocEx` | `VirtualAllocEx` | `NtAllocateVirtualMemory` | Kernel callback |
 | `WriteProcessMemory` | `WriteProcessMemory` | `NtWriteVirtualMemory` | Kernel callback |
