@@ -99,9 +99,11 @@ This predictability is exactly what makes hook detection possible — and exactl
 
 ---
 
-## How EDRs Hook ntdll
+## How Some EDRs Hook ntdll
 
-When an EDR driver loads (at boot, before any user process starts), it maps a copy of ntdll and patches the first few bytes of selected functions. The patch overwrites the clean stub with a jump instruction that redirects execution to the EDR's own handler in its userland DLL.
+> **This section describes the userland inline hook approach used by products such as CrowdStrike Falcon, SentinelOne, and Carbon Black.** As the lab results below show, MDE does not use this mechanism for injection APIs — it operates at the kernel layer instead. The mechanism is worth understanding because it is widespread, and because the techniques in Parts 4–5 of this series are a direct response to it.
+
+When this class of EDR driver loads (at boot, before any user process starts), it maps a copy of ntdll and patches the first few bytes of selected functions. The patch overwrites the clean stub with a jump instruction that redirects execution to the EDR’s own handler in its userland DLL.
 
 **Before hooking — clean bytes:**
 
@@ -133,13 +135,13 @@ sequenceDiagram
     participant Code as Your Code
     participant K32 as kernel32.dll
     participant NTDLL as ntdll.dll
-    participant EDR as EDR Handler
+    participant EDR as EDR Handler (e.g. CrowdStrike)
     participant Tramp as EDR Trampoline
     participant Kernel as Kernel
 
     Code->>K32: VirtualAllocEx(...)
     K32->>NTDLL: NtAllocateVirtualMemory(...)
-    Note over NTDLL: First bytes = E9 XX XX XX XX
+    Note over NTDLL: First bytes patched: E9 XX XX XX XX
     NTDLL->>EDR: jmp (inline hook fires)
     EDR->>EDR: Inspect args, log telemetry
     EDR->>Tramp: Call trampoline (original bytes)
