@@ -249,7 +249,7 @@ Running HookDetector on a Windows 11 system with the **Microsoft Defender for En
 
 ![HookDetector SUMMARY BY CATEGORY — Memory and Thread show 0 hooks, ETW shows 3, File shows 2, Module shows 1](/assets/img/posts/api-series/hookdetector-summary.png)
 
-The summary:
+The headline numbers:
 
 ```
 [*] Total Functions Checked: 45
@@ -257,55 +257,19 @@ The summary:
 [+] CLEAN Functions: 39
 ```
 
-**The 6 hooked functions:**
+> **Tool limitation note:** HookDetector detects hooks by checking the first bytes of each function against the expected `4C 8B D1 B8` syscall stub pattern. For ntdll functions that are *not* syscall stubs — like `EtwEventWrite` and `LdrLoadDll`, which have full implementations — any non-matching prologue is reported as `SUSPICIOUS (Modified Syscall Stub)`. Similarly, `kernel32!CreateFileA/W` starting with `FF 25` are standard **forwarding thunks** to `kernelbase.dll`, not hooks. The tool cannot distinguish between a hooked complex function and a normal one using this method alone.
+
+The reliable part of the output is the **syscall stub results** — those have a definitive expected pattern and the tool identifies deviations unambiguously. And those are all clean:
 
 ```
-[HOOKED] kernel32.dll!CreateFileA
-         Type: Inline Hook (JMP Indirect)
-         Bytes: FF 25 F2 28 03 00 ...
-         ASM: jmp [rip+0x328F2]
-
-[HOOKED] kernel32.dll!CreateFileW
-         Type: Inline Hook (JMP Indirect)
-         Bytes: FF 25 DA 28 03 00 ...
-         ASM: jmp [rip+0x328DA]
-
-[HOOKED] ntdll.dll!EtwEventWrite
-         Bytes: 40 55 57 41 54 41 56 41 57 ...
-
-[HOOKED] ntdll.dll!EtwEventWriteFull
-         Bytes: 4C 8B DC 48 83 EC 58 ...
-
-[HOOKED] ntdll.dll!EtwEventWriteTransfer
-         Bytes: 40 55 57 41 54 41 55 41 57 ...
-
-[HOOKED] ntdll.dll!LdrLoadDll
-         Bytes: 4C 8B DC 49 89 5B 10 56 57 ...
+[CLEAN]  ntdll.dll!NtAllocateVirtualMemory   4C 8B D1 B8  ->  mov eax, 0x18
+[CLEAN]  ntdll.dll!NtWriteVirtualMemory       4C 8B D1 B8  ->  mov eax, 0x3A
+[CLEAN]  ntdll.dll!NtProtectVirtualMemory     4C 8B D1 B8  ->  mov eax, 0x50
+[CLEAN]  ntdll.dll!NtCreateThreadEx           4C 8B D1 B8  ->  mov eax, 0xC9
+[CLEAN]  ntdll.dll!NtCreateUserProcess        4C 8B D1 B8  ->  mov eax, 0xD1
 ```
 
-And critically — all of these are **clean** (unmodified `4C 8B D1 B8` syscall stubs):
-
-```
-[CLEAN]  ntdll.dll!NtAllocateVirtualMemory   mov eax, 0x18
-[CLEAN]  ntdll.dll!NtWriteVirtualMemory       mov eax, 0x3A
-[CLEAN]  ntdll.dll!NtProtectVirtualMemory     mov eax, 0x50
-[CLEAN]  ntdll.dll!NtCreateThreadEx           mov eax, 0xC9
-[CLEAN]  ntdll.dll!NtCreateUserProcess        mov eax, 0xD1
-```
-
-**MDE does not hook the injection APIs at the ntdll level.**
-
-This is the key finding, and it explains MDE's architecture. MDE collects injection telemetry through **kernel-mode callbacks** — `PsSetCreateProcessNotifyRoutine`, `PsSetCreateThreadNotifyRoutine`, and kernel-mode ETW providers. Those callbacks fire at the kernel level regardless of whether your code calls through ntdll or issues a raw `syscall` instruction directly.
-
-What MDE *does* hook in userland reveals its priorities:
-
-| Hooked function | Why |
-|---|---|
-| `EtwEventWrite` / `EtwEventWriteTransfer` / `EtwEventWriteFull` | Protecting its own telemetry pipeline. If you patch these in userland to suppress ETW events, MDE's hook detects the attempt. |
-| `LdrLoadDll` | Monitoring DLL loads — detecting reflective injection, suspicious module loads. |
-| `CreateFileA` / `CreateFileW` | File access monitoring for on-access scanning. |
-
-The injection APIs (`NtAllocateVirtualMemory`, `NtWriteVirtualMemory`, `NtCreateThreadEx`) are watched at the kernel layer, not here.
+**Every injection-relevant syscall stub is unmodified.** MDE has not patched the ntdll entry points for memory allocation, remote writes, or thread creation. There are no userland inline hooks on the injection API path.
 
 ### The Forwarding Thunk Pattern
 
@@ -361,6 +325,47 @@ The injector's every action is visible to MDE — but not because of ntdll hooks
 The import table (Part 1) tells an analyst what the binary *intends* to do. The hook and callback infrastructure tells the EDR what it *is doing*, live. These are separate detection mechanisms requiring different responses.
 
 The practical implication: for products that use userland ntdll hooks, removing those hooks eliminates their visibility into that call. For MDE, the ntdll layer was never where it was looking.
+
+---
+
+## The Practical Proof
+
+Analysing bytes in a tool is one thing. Running the injection is another.
+
+BasicInjector was modified to remove shellcode entirely. Instead of allocating RWX memory and writing shellcode bytes, it:
+
+1. Resolves `WinExec` from `kernel32.dll` at runtime using `GetProcAddress`
+2. Allocates `PAGE_READWRITE` (not RWX) memory in the target process — just enough for the string `"calc.exe\0"`
+3. Writes that string with `WriteProcessMemory`
+4. Calls `CreateRemoteThread` with `WinExec` as the start address and the string pointer as the parameter
+
+No shellcode. No executable memory. No known byte signatures.
+
+ThreatCheck on the binary before running:
+
+```
+[+] No threat found!
+[*] Run time: 0.1s
+```
+
+Running against notepad.exe on the MDE-protected system:
+
+```
+PS C:\> .\BasicInjector.exe
+[*] WinExec @ 0x7FFA92990790
+[*] Target PID: 11340
+[*] String allocated at 0x1EE738A0000
+[*] Wrote 9 bytes
+[+] Remote thread created — WinExec("calc.exe") running in notepad
+```
+
+![BasicInjector running against notepad on MDE-protected system — calc.exe opened, Windows Security showing MDE active, no alert](/assets/img/posts/api-series/basicinjector-calc.png)
+
+Calc opened. MDE did not alert.
+
+The complete four-step injection sequence — `OpenProcess`, `VirtualAllocEx`, `WriteProcessMemory`, `CreateRemoteThread` — completed on an MDE-protected system with no userland hooks intercepting any call and no static signature to trigger the scanner.
+
+This is the point. The API calls were never what MDE was watching.
 
 ---
 

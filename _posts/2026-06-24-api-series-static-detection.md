@@ -183,7 +183,7 @@ The two tools give complementary pictures — and together they surface three se
 |---|---|---|
 | Import table risk scoring | Analyst / EDR static analysis | Dynamic API resolution (Part 3) |
 | Payload byte signature | Defender active rule | Encrypt/encode the payload; avoid known prologues |
-| API call behaviour at runtime | EDR hooks in ntdll | Direct syscalls / unhooking (Parts 4–5) |
+| API call behaviour at runtime | EDR hooks (CrowdStrike-style) or kernel callbacks (MDE-style) — see Part 2 | Direct syscalls / unhooking (Parts 4–5) |
 
 The import table does not trigger an active Defender signature on its own — but it will get the binary flagged by any analyst or EDR that does risk scoring on the IAT. Removing the imports with dynamic resolution solves the static analysis problem but does nothing about runtime hooks. Each problem has a specific fix, and understanding which layer is firing tells you which fix to apply.
 
@@ -195,7 +195,7 @@ The import table problem is solvable without modifying the payload at all. Inste
 
 Before getting there, Part 2 takes a step back and explains what happens under the hood when you call a Windows API: the full path from your code through `kernel32.dll` and `ntdll.dll` down to the syscall boundary, and exactly where EDRs insert their hooks along that path. Understanding the call stack is what makes the later evasion techniques make sense.
 
-- **[API Series Part 2: The Windows API Call Stack and EDR Hook Points](/posts/api-series-call-stack/)** *(coming soon)*
+- **[API Series Part 2: The Windows API Call Stack and Where EDRs Hook](/posts/api-series-call-stack/)**
 
 ---
 
