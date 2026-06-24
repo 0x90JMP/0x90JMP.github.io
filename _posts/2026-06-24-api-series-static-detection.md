@@ -1,5 +1,5 @@
 ---
-title: "API Series Part 1: Static Detection and Why Your Loader Gets Caught"
+title: "API Series Part 1: Do Your API Imports Get You Caught? Testing the Static Assumption"
 date: 2026-06-24 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, csharp, pe, import-table, static-analysis, pestudio, threatcheck, defender, red-team]
@@ -24,18 +24,7 @@ This post tests that assumption. A basic shellcode injector is compiled and put 
 
 ## What Is Static Detection?
 
-Antivirus engines perform two broad categories of detection: static and dynamic (behavioural).
-
-**Static detection** happens before the binary executes. The AV engine reads the file on disk — or in memory when it is written — and scans for patterns it recognises as malicious:
-
-- Specific byte sequences (shellcode signatures)
-- Suspicious strings embedded in the binary
-- Import table entries that match known offensive patterns
-- High entropy sections (indicators of encryption or packing)
-
-**Dynamic (behavioural) detection** happens at runtime: API call sequences, memory operations, network connections. That is covered in later posts.
-
-This distinction matters because static and dynamic detections require different technical approaches to understand and address. Solving one does not solve the other. This post deals entirely with static.
+Antivirus engines analyse files before they execute, scanning for patterns associated with malicious code: known byte sequences, suspicious import combinations, and indicators of packed or encrypted content. **Dynamic (behavioural) detection** is different — that fires at runtime based on what the binary actually does. This post deals only with static: what the binary looks like on disk before a single instruction runs.
 
 ---
 
@@ -110,11 +99,9 @@ This is clean, readable code. It also announces exactly what it does to every AV
 
 ---
 
-## What AV Sees: PEStudio Analysis
+## What PEStudio Sees
 
 **PEStudio** (free, from winitor.com) opens a PE binary and scores it across multiple indicators before execution. Opening `BasicInjector.exe` immediately surfaces the problem.
-
-### Import Table
 
 PEStudio colour-codes imports by threat level. The four injection functions all appear flagged:
 
@@ -130,14 +117,6 @@ Each flag has a reason:
 | `CreateRemoteThread` | Creating a thread in a remote process is how injected code is started |
 
 No single import is conclusive on its own. `OpenProcess` is called by debuggers. `VirtualAllocEx` is called by some legitimate tools. But the combination of all four, in the same binary, with no other context, is a textbook injection pattern — and AV engines have been scoring this combination as malicious for over a decade.
-
-### Strings
-
-PEStudio also extracts strings from the binary. Even without the imports, the function names appear as strings in the PE's metadata sections — another detection surface.
-
-### Entropy
-
-The shellcode section produces elevated entropy. A block of random-looking bytes with high entropy tells AV "this is probably encrypted or compressed code" — which correlates strongly with shellcode. Even if the bytes themselves do not match a known signature, high entropy in an executable section is an indicator.
 
 ---
 
@@ -162,30 +141,14 @@ Result:
 [*] Run time: 0.09s
 ```
 
-**The imports alone do not trigger Defender's static signature engine.** A binary containing `OpenProcess`, `VirtualAllocEx` with `PAGE_EXECUTE_READWRITE`, `WriteProcessMemory`, and `CreateRemoteThread` in its IAT does not get flagged on disk by Windows Defender — even with no obfuscation, no packing, and no payload encryption.
+**The imports alone do not trigger Defender's static signature engine.** PEStudio scored the binary as high-risk. ThreatCheck showed Defender won’t quarantine it. The two tools are measuring different things:
 
-This is not a defence of that binary. It means PEStudio and Defender are measuring different things:
-
-| Layer | What triggers it | Tool that surfaces it |
+| Layer | What triggers it | Tool |
 |---|---|---|
-| Risk scoring | Suspicious import combinations | PEStudio (analyst review) |
-| Active signature | Known byte sequences (payload bytes) | ThreatCheck (Defender engine) |
+| Risk scoring | Suspicious import combinations | PEStudio |
+| Active signature | Known byte sequences | ThreatCheck / Defender |
 
-Defender's on-disk signature rule needs a known-bad byte pattern to fire. The import table is an indicator — it raises the risk score — but it is not a signature match on its own. PEStudio surfaces the import risk because an analyst reviewing this binary would immediately treat it as an injection tool. An EDR doing behavioural analysis at runtime would watch those calls closely. But the static quarantine rule needs something it can pin to a specific byte sequence.
-
----
-
-## Two Distinct Problems
-
-The two tools give complementary pictures — and together they surface three separate evasion problems:
-
-| Problem | Detection layer | Solution |
-|---|---|---|
-| Import table risk scoring | Analyst / EDR static analysis | Dynamic API resolution (Part 3) |
-| Payload byte signature | Defender active rule | Encrypt/encode the payload; avoid known prologues |
-| API call behaviour at runtime | EDR hooks (CrowdStrike-style) or kernel callbacks (MDE-style) — see Part 2 | Direct syscalls / unhooking (Parts 4–5) |
-
-The import table does not trigger an active Defender signature on its own — but it will get the binary flagged by any analyst or EDR that does risk scoring on the IAT. Removing the imports with dynamic resolution solves the static analysis problem but does nothing about runtime hooks. Each problem has a specific fix, and understanding which layer is firing tells you which fix to apply.
+The import table raises the risk score for any analyst or tool doing static analysis. It does not fire an active detection rule on its own. That distinction matters — and it is the first result in a longer test.
 
 ---
 

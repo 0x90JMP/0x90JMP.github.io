@@ -393,5 +393,5 @@ Each technique addresses a specific layer. This post mapped those layers. The re
 - [PE Format — Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format)
 
 **Related posts:**
-- [API Series Part 1: Static Detection and Why Your Loader Gets Caught](/posts/api-series-static-detection/)
+- [API Series Part 1: Do Your API Imports Get You Caught? Testing the Static Assumption](/posts/api-series-static-detection/)
 - [AMSI Internals Part 1: The Full Scan Pipeline](/posts/amsi-internals-scan-pipeline/)
