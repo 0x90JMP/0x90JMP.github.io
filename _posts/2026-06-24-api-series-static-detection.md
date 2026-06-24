@@ -8,15 +8,15 @@ toc: true
 
 ## Overview
 
-Windows API calls are how every piece of software — legitimate or otherwise — interacts with the operating system. Understanding how those calls are made, what traces they leave in a compiled binary, and how security tools interpret those traces is foundational knowledge for offensive security engineering.
+The common assumption in offensive security is that using well-known injection APIs — `VirtualAllocEx`, `WriteProcessMemory`, `CreateRemoteThread` — is an immediate detection trigger. The import table is visible, the function names are recognisable, and every AV engine has been scoring this combination as malicious for years.
 
-This post starts from the beginning: a basic shellcode injector written in C#, compiled and examined with static analysis tools to understand exactly what each tool sees and why certain API choices draw attention. No obfuscation, no tricks — just the raw binary and the analysis.
+This post tests that assumption. A basic shellcode injector is compiled and put in front of two static analysis tools to see exactly what each one flags, what it ignores, and what the actual detection trigger turns out to be. The result is the first piece of evidence in a longer question: at which layer does detection actually fire?
 
 **What this post covers:**
 - What static analysis is and what AV engines see before a binary runs
 - The PE Import Address Table — why it is the first thing AV looks at
-- A classic four-step shellcode injector and why each API call is suspicious
-- Using PEStudio and ThreatCheck to identify exactly what is being flagged
+- A classic four-step shellcode injector and why each API call draws attention
+- Using PEStudio and ThreatCheck to test what actually gets flagged
 
 > All techniques described here were performed in an authorised lab environment. For educational purposes only.
 
@@ -191,9 +191,9 @@ The import table does not trigger an active Defender signature on its own — bu
 
 ## What Comes Next
 
-The import table problem is solvable without modifying the payload at all. Instead of declaring `[DllImport]` at compile time — which hard-codes the function names into the IAT — you resolve function addresses at runtime by reading the Process Environment Block yourself.
+The import table flags the binary as suspicious to any analyst or tool doing risk scoring. But ThreatCheck showed Defender’s static engine does not fire on the imports alone.
 
-Before getting there, Part 2 takes a step back and explains what happens under the hood when you call a Windows API: the full path from your code through `kernel32.dll` and `ntdll.dll` down to the syscall boundary, and exactly where EDRs insert their hooks along that path. Understanding the call stack is what makes the later evasion techniques make sense.
+Part 2 tests the next assumption: at runtime, does making these API calls trigger detection? We trace the full path of a `VirtualAllocEx` call from your code through the Windows API layers to the kernel, map exactly where different EDRs instrument that path, and then run the injection against a live MDE-protected system to see what actually happens.
 
 - **[API Series Part 2: The Windows API Call Stack and Where EDRs Hook](/posts/api-series-call-stack/)**
 

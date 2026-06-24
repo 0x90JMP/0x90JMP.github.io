@@ -8,9 +8,9 @@ toc: true
 
 ## Overview
 
-When your code calls `VirtualAllocEx`, that single line sets off a chain of function calls descending through multiple DLL layers before it ever reaches the Windows kernel. Every layer in that chain is an opportunity for a security product to observe, intercept, or block the call.
+Part 1 tested the static assumption: do the injection API imports alone trigger detection? The answer was no — ThreatCheck showed clean on a binary with all four injection imports and no payload.
 
-This post traces that chain from top to bottom. By the end you will know exactly what an EDR does when it "hooks" an API — what that means technically, what the modified bytes look like in memory, and how to detect it.
+This post tests the runtime assumption: when those API calls are actually made against a live process on an MDE-protected system, does detection fire? To answer that we first need to understand what the call chain actually looks like — where your code goes when it calls `VirtualAllocEx`, which DLL layers it passes through, and where different EDRs sit in that path.
 
 **What this post covers:**
 - The four-layer Windows API model: Win32 → kernelbase → NT API → syscall
@@ -19,6 +19,7 @@ This post traces that chain from top to bottom. By the end you will know exactly
 - The three most common hook patterns and what their bytes look like
 - A C# tool that reads function prologues and detects hooks live
 - What MDE actually hooks in practice — and why it is not what most people expect
+- A live injection test against MDE: what fires and what does not
 
 ---
 
@@ -365,7 +366,9 @@ Calc opened. MDE did not alert.
 
 The complete four-step injection sequence — `OpenProcess`, `VirtualAllocEx`, `WriteProcessMemory`, `CreateRemoteThread` — completed on an MDE-protected system with no userland hooks intercepting any call and no static signature to trigger the scanner.
 
-This is the point. The API calls were never what MDE was watching.
+**This is a foundational result, not a bypass.** The injection was benign: no shellcode, no payload, no network connection, no credential access. MDE’s kernel callbacks received the thread creation event — it was not invisible. What kept the alert from firing was the absence of any malicious behaviour following the injection. A real implant executing stage-2 code, beaconing to a C2, reading LSASS, or moving laterally would generate a cascade of kernel-level events that MDE’s behavioural model would detect — not because of the API calls themselves, but because of what they collectively accomplish.
+
+The point is that **the API calls are not the tripwire**. MDE does not maintain a simple list of banned function calls. Detection is contextual and behavioural, built from kernel telemetry that accumulates over the lifetime of the operation. Understanding that is what makes the techniques in the rest of this series meaningful: each one targets a specific layer, and knowing which layer is actually relevant changes which technique matters.
 
 ---
 
