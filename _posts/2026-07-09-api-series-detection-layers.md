@@ -4,6 +4,7 @@ date: 2026-07-09 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, c, mde, edr, behavioural-detection, static-analysis, reverse-shell, c2, network, red-team]
 toc: true
+published: false
 ---
 
 ## Overview
