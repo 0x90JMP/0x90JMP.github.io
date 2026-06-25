@@ -465,7 +465,7 @@ Part 3 continues the research by asking a different question about visibility:
 
 The next post examines the ETW layer — the providers that feed MDE with real-time telemetry, which events fire during a typical injection workflow, and what changes when that write path is interrupted.
 
-* **API Series Part 3: ETW and the Telemetry Layer — What MDE Actually Collects** *(coming soon)*
+* **[API Series Part 3: The Network Is the Detection Surface](/posts/api-series-detection-layers/)** *(coming soon)*
 
 ***
 
