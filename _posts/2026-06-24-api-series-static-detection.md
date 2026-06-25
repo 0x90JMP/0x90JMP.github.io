@@ -1,6 +1,6 @@
 ---
 title: "API Series Part 1: Do Your API Imports Get You Caught? Testing the Static Assumption"
-date: 2030-06-06 00:00:00 +0000
+date: 2026-06-06 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, csharp, pe, import-table, static-analysis, pestudio, threatcheck, defender, red-team]
 toc: true
@@ -8,48 +8,102 @@ toc: true
 
 ## Overview
 
-The common assumption in offensive security is that using well-known injection APIs — `VirtualAllocEx`, `WriteProcessMemory`, `CreateRemoteThread` — is an immediate detection trigger. The import table is visible, the function names are recognisable, and every AV engine has been scoring this combination as malicious for years.
+The common assumption in offensive security is that using well-known injection APIs such as `VirtualAllocEx`, `WriteProcessMemory`, and `CreateRemoteThread` is an immediate detection trigger. The import table is visible, the function names are recognisable, and every AV engine has been scoring this combination as suspicious for years.
 
-This post tests that assumption. A basic shellcode injector is compiled and put in front of two static analysis tools to see exactly what each one flags, what it ignores, and what the actual detection trigger turns out to be. The result is the first piece of evidence in a longer question: at which layer does detection actually fire?
+This post tests that assumption.
+
+A basic shellcode injector is compiled and presented to two static analysis tools to determine exactly what each one flags, what it ignores, and where detection actually occurs. The result becomes the first piece of evidence in a larger question that runs through this series:
+
+> **At which layer does detection actually fire?**
 
 **What this post covers:**
-- What static analysis is and what AV engines see before a binary runs
-- The PE Import Address Table — why it is the first thing AV looks at
-- A classic four-step shellcode injector and why each API call draws attention
-- Using PEStudio and ThreatCheck to test what actually gets flagged
 
-> All techniques described here were performed in an authorised lab environment. For educational purposes only.
+* What static analysis is and what AV engines see before a binary executes
+* The PE Import Address Table (IAT) and why it is examined during static analysis
+* A classic four-step shellcode injector
+* Using PEStudio and ThreatCheck to understand what is actually being detected
+* Why suspicious does not necessarily mean detected
 
----
+> All techniques described here were performed in an authorised lab environment for educational and research purposes.
+
+***
 
 ## What Is Static Detection?
 
-Antivirus engines analyse files before they execute, scanning for patterns associated with malicious code: known byte sequences, suspicious import combinations, and indicators of packed or encrypted content. **Dynamic (behavioural) detection** is different — that fires at runtime based on what the binary actually does. This post deals only with static: what the binary looks like on disk before a single instruction runs.
+Before a binary executes, antivirus engines can analyse it on disk.
 
----
+This process is commonly called **static analysis** because the file is examined without being run. During this stage an engine may inspect:
+
+* Import tables
+* Embedded strings
+* PE structure
+* Entropy levels
+* Known malicious signatures
+* Packers and obfuscation indicators
+
+This differs from **dynamic detection**, where the binary is observed while running and detections are based on runtime behaviour rather than file contents.
+
+This post focuses only on static analysis:
+
+> What can an AV engine learn before a single instruction executes?
+
+***
 
 ## The PE Import Address Table
 
-When you write a C# program that calls `VirtualAllocEx`, the compiler does not embed the function's code in your binary. Instead, it records the dependency: "this binary needs `VirtualAllocEx` from `kernel32.dll`." That record lives in the **Import Address Table (IAT)**, a structured section of the PE file that Windows reads at load time to wire up function pointers.
+When you write a C# program that calls `VirtualAllocEx`, the compiler does not copy the implementation of `VirtualAllocEx` into your program.
 
-The IAT is plain text. Any tool — including AV engines — can open your binary and read exactly which functions you import from which DLLs before a single instruction runs.
+Instead, it records a dependency:
 
-This is the first problem.
+> This binary requires `VirtualAllocEx` from `kernel32.dll`.
 
----
+Those dependencies are stored in the **Import Address Table (IAT)**.
+
+At runtime, Windows resolves those references and populates the addresses of the required functions.
+
+The important point is that the import names are visible before execution.
+
+Any analyst, AV engine, or static-analysis tool can open the binary and immediately see:
+
+```text
+OpenProcess
+VirtualAllocEx
+WriteProcessMemory
+CreateRemoteThread
+```
+
+without executing any code.
+
+Because of this, the IAT is often one of the first areas inspected during static analysis.
+
+***
 
 ## The Classic Four-Step Injector
 
-Remote process injection follows the same pattern in virtually every offensive C# tool. The steps are:
+Most introductory process-injection examples follow the same pattern:
 
-```
-1. OpenProcess      — get a handle to the target process
-2. VirtualAllocEx   — allocate RWX memory inside it
-3. WriteProcessMemory — copy shellcode into that allocation
-4. CreateRemoteThread — start execution at the shellcode address
+```text
+1. OpenProcess
+2. VirtualAllocEx
+3. WriteProcessMemory
+4. CreateRemoteThread
 ```
 
-In C#, each of those calls requires a `[DllImport]` declaration:
+Conceptually:
+
+```text
+OpenProcess
+        ↓
+VirtualAllocEx
+        ↓
+WriteProcessMemory
+        ↓
+CreateRemoteThread
+```
+
+The target process is opened, memory is allocated, data is written, and execution is started.
+
+In C#, each Win32 API requires a P/Invoke declaration:
 
 ```csharp
 [DllImport("kernel32.dll", SetLastError = true)]
@@ -69,9 +123,9 @@ static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttribut
     uint dwCreationFlags, IntPtr lpThreadId);
 ```
 
-Every one of these declarations causes the function name to be written verbatim into the compiled binary's import table.
+Each declaration causes those API names to become visible within the compiled binary.
 
-The full injector using these imports:
+The resulting injector looks something like:
 
 ```csharp
 static void Main(string[] args)
@@ -79,88 +133,202 @@ static void Main(string[] args)
     Process[] targets = Process.GetProcessesByName("notepad");
     int pid = targets[0].Id;
 
-    // Step 1: handle to target process
     IntPtr hProcess = OpenProcess(0x001F0FFF, false, pid);
 
-    // Step 2: allocate RWX memory in the remote process
-    IntPtr addr = VirtualAllocEx(hProcess, IntPtr.Zero,
-        (uint)shellcode.Length, 0x3000, 0x40);
+    IntPtr addr = VirtualAllocEx(
+        hProcess,
+        IntPtr.Zero,
+        (uint)shellcode.Length,
+        0x3000,
+        0x40);
 
-    // Step 3: write shellcode
     int written;
-    WriteProcessMemory(hProcess, addr, shellcode, shellcode.Length, out written);
 
-    // Step 4: execute
-    CreateRemoteThread(hProcess, IntPtr.Zero, 0, addr, IntPtr.Zero, 0, IntPtr.Zero);
+    WriteProcessMemory(
+        hProcess,
+        addr,
+        shellcode,
+        shellcode.Length,
+        out written);
+
+    CreateRemoteThread(
+        hProcess,
+        IntPtr.Zero,
+        0,
+        addr,
+        IntPtr.Zero,
+        0,
+        IntPtr.Zero);
 }
 ```
 
-This is clean, readable code. It also announces exactly what it does to every AV engine that scans it.
+From a static-analysis perspective, the binary appears to implement a textbook injection workflow.
 
----
+***
 
 ## What PEStudio Sees
 
-**PEStudio** (free, from winitor.com) opens a PE binary and scores it across multiple indicators before execution. Opening `BasicInjector.exe` immediately surfaces the problem.
+PEStudio is designed to identify potentially suspicious characteristics without executing code.
 
-PEStudio colour-codes imports by threat level. The four injection functions all appear flagged:
+Opening `BasicInjector.exe` immediately highlights the four injection-related imports.
 
-![PEStudio import table showing VirtualAllocEx, WriteProcessMemory, CreateRemoteThread flagged as suspicious](/assets/img/posts/api-series/pestudio-imports.png)
+![PEStudio import table showing VirtualAllocEx, WriteProcessMemory, CreateRemoteThread flagged as suspicious](pestudio-imports.png)
 
-Each flag has a reason:
+PEStudio assigns risk scores because these APIs frequently appear in malicious tooling.
 
-| Import | Why it is flagged |
-|---|---|
-| `OpenProcess` with `PROCESS_ALL_ACCESS` | Acquiring full control of another process is the first step of every injection technique |
-| `VirtualAllocEx` | Allocating executable memory in a remote process has no legitimate use case in most applications |
-| `WriteProcessMemory` | Writing to another process's memory is the defining action of code injection |
-| `CreateRemoteThread` | Creating a thread in a remote process is how injected code is started |
+| Import               | Why it attracts attention                    |
+| -------------------- | -------------------------------------------- |
+| `OpenProcess`        | Obtains access to another process            |
+| `VirtualAllocEx`     | Allocates memory in a remote process         |
+| `WriteProcessMemory` | Modifies memory belonging to another process |
+| `CreateRemoteThread` | Starts execution inside another process      |
 
-No single import is conclusive on its own. `OpenProcess` is called by debuggers. `VirtualAllocEx` is called by some legitimate tools. But the combination of all four, in the same binary, with no other context, is a textbook injection pattern — and AV engines have been scoring this combination as malicious for over a decade.
+Individually these APIs are not malicious.
 
----
+Debuggers, profilers, accessibility software and numerous legitimate applications use them.
 
-## ThreatCheck: Isolating What Defender Actually Fires On
+The concern comes from the combination.
 
-PEStudio tells you what looks suspicious. **ThreatCheck** tells you exactly which bytes trigger the Defender engine.
+When all four appear together, they resemble a well-known injection pattern.
 
-ThreatCheck binary-searches the PE: it submits halves of the file to Defender's scan engine, determines which half contains the detection, and recurses until it isolates the minimum triggering byte range.
+As a result, PEStudio flags the binary as suspicious.
 
-To isolate whether the imports themselves trigger a detection, BasicInjector was built with a zeroed 256-byte payload buffer instead of real shellcode — stripping any known payload signature from the binary.
+The key question is whether suspicion automatically results in detection.
 
-```
+***
+
+## ThreatCheck: What Actually Triggers Defender?
+
+PEStudio tells us a file appears suspicious.
+
+ThreatCheck asks a different question:
+
+> Which bytes, if any, actually trigger the Defender engine?
+
+ThreatCheck performs a recursive search against Defender's scanning engine to identify the minimum portion of a file responsible for a detection.
+
+To isolate the imports from the payload, the injector was compiled with a zeroed 256-byte buffer instead of real shellcode.
+
+This removes known shellcode signatures while leaving the import table intact.
+
+```text
 ThreatCheck.exe -f BasicInjector.exe
 ```
 
-![ThreatCheck showing no threat found on BasicInjector with zeroed payload](/assets/img/posts/api-series/threatcheck-output.png)
+![ThreatCheck showing no threat found on BasicInjector with zeroed payload](threatcheck-output.png)
 
 Result:
 
-```
+```text
 [+] No threat found!
 [*] Run time: 0.09s
 ```
 
-**The imports alone do not trigger Defender's static signature engine.** PEStudio scored the binary as high-risk. ThreatCheck showed Defender won’t quarantine it. The two tools are measuring different things:
+This is the interesting part.
 
-| Layer | What triggers it | Tool |
-|---|---|---|
-| Risk scoring | Suspicious import combinations | PEStudio |
-| Active signature | Known byte sequences | ThreatCheck / Defender |
+The injector still imports:
 
-The import table raises the risk score for any analyst or tool doing static analysis. It does not fire an active detection rule on its own. That distinction matters — and it is the first result in a longer test.
+```text
+OpenProcess
+VirtualAllocEx
+WriteProcessMemory
+CreateRemoteThread
+```
 
----
+Yet Defender did not generate a signature hit.
+
+The imports clearly contributed to PEStudio's risk scoring, but they were not sufficient to trigger Defender's static engine.
+
+The two tools are answering different questions.
+
+| Layer                  | What is being measured?                             |
+| ---------------------- | --------------------------------------------------- |
+| PEStudio               | How suspicious does the file look?                  |
+| ThreatCheck / Defender | Is there a signature match that triggers detection? |
+
+That distinction matters.
+
+A file can appear highly suspicious without being actively detected.
+
+***
+
+## What This Tells Us
+
+The outcome is not that the import table is irrelevant.
+
+The imports remain valuable information for both analysts and static-analysis tools.
+
+The result is simply that:
+
+> The import combination alone was insufficient to trigger Defender's static detection engine during testing.
+
+This challenges a common assumption.
+
+Many practitioners treat the following combination as though it automatically results in detection:
+
+```text
+VirtualAllocEx
+WriteProcessMemory
+CreateRemoteThread
+```
+
+The evidence here suggests a more nuanced reality.
+
+The imports increased suspicion.
+
+They did not, by themselves, produce a Defender detection.
+
+***
+
+## The Next Question
+
+The result raises a more interesting question.
+
+If Defender does not trigger purely because these APIs appear in the import table, what happens when the injector actually runs?
+
+Many security practitioners assume that functions such as:
+
+```text
+VirtualAllocEx
+WriteProcessMemory
+CreateRemoteThread
+```
+
+become the detection trigger once execution begins.
+
+Part 2 tests that assumption.
+
+We follow the path of an API call through:
+
+```text
+Your code
+    ↓
+kernel32.dll
+    ↓
+kernelbase.dll
+    ↓
+ntdll.dll
+    ↓
+syscall
+    ↓
+kernel
+```
+
+and examine where telemetry is collected, where different EDRs commonly instrument that path, and what actually happens when the injector executes on a live Microsoft Defender for Endpoint protected system.
+
+***
 
 ## What Comes Next
 
-The import table flags the binary as suspicious to any analyst or tool doing risk scoring. But ThreatCheck showed Defender’s static engine does not fire on the imports alone.
+Part 2 explores the runtime question:
 
-Part 2 tests the next assumption: at runtime, does making these API calls trigger detection? We trace the full path of a `VirtualAllocEx` call from your code through the Windows API layers to the kernel, map exactly where different EDRs instrument that path, and then run the injection against a live MDE-protected system to see what actually happens.
+> Does executing these APIs trigger detection?
 
-- **[API Series Part 2: The Windows API Call Stack and Where EDRs Hook](/posts/api-series-call-stack/)**
+Rather than relying on assumptions, we examine the actual call path, inspect what is hooked, execute the injection workflow, and observe the result.
 
----
+* **[API Series Part 2: The Windows API Call Stack and Where EDRs Hook](/posts/api-series-call-stack/)**
+
+***
 
 ## References
 

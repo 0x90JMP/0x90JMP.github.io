@@ -1,6 +1,6 @@
 ---
 title: "API Series Part 2: The Windows API Call Stack and Where EDRs Hook"
-date: 2030-06-24 00:00:00 +0000
+date: 2026-06-24 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, csharp, ntdll, hooks, edr, syscall, kernel32, api-call-stack, red-team]
 toc: true
@@ -9,22 +9,58 @@ mermaid: true
 
 ## Overview
 
-Part 1 tested the static assumption: do the injection API imports alone trigger detection? The answer was no — ThreatCheck showed clean on a binary with all four injection imports and no payload.
+Part 1 tested the first detection assumption:
 
-This post tests the runtime assumption: when those API calls are actually made against a live process on an MDE-protected system, does detection fire? To answer that we first need to understand what the call chain actually looks like — where your code goes when it calls `VirtualAllocEx`, which DLL layers it passes through, and where different EDRs sit in that path.
+> Do the injection imports themselves trigger Defender?
+
+The answer was no. The binary was clearly identifiable as an injector from its import table, but the imports alone were insufficient to produce a Defender detection.
+
+That result raises the next question.
+
+If static analysis is not firing on the imports, what happens when those APIs are actually executed? Many practitioners assume that functions such as `VirtualAllocEx`, `WriteProcessMemory`, and `CreateRemoteThread` become the detection trigger at runtime.
+
+This post tests that assumption by tracing the full API path from user code to the kernel and observing what happens when the injection chain executes on a live Microsoft Defender for Endpoint (MDE) protected system.
+
+The larger question remains the same:
+
+> **At which layer does detection actually fire?**
+
+> **Test scope:** All observations in this post were collected from a fully onboarded Windows 11 endpoint running the Microsoft Defender for Endpoint sensor available at the time of testing. EDR implementations evolve over time, and different Windows builds, sensor versions, configurations, or third-party integrations may produce different results. The conclusions here should be interpreted as observations from the tested environment rather than universal characteristics of all MDE deployments.
 
 **What this post covers:**
-- The four-layer Windows API model: Win32 → kernelbase → NT API → syscall
-- What forwarding thunks are and why kernel32 is mostly just jump tables
-- How userland ntdll hooks work and why MDE uses a different approach
-- What MDE actually hooks in practice — and why it is not what most people expect
-- A live injection test against MDE: what fires and what does not
 
----
+* The four-layer Windows API model: Win32 → kernelbase → NT API → syscall
+* What forwarding thunks are and why kernel32 is mostly a compatibility layer
+* How userland ntdll hooks work
+* What MDE appears to hook in practice
+* A live injection test against MDE
+* Why telemetry collection and detection are not the same thing
+
+***
+
+## The Runtime Hypothesis
+
+If the import table was not sufficient to trigger Defender's static engine, several explanations are possible:
+
+1. The runtime API calls themselves are the detection trigger.
+2. The API calls generate telemetry but are not detections by themselves.
+3. Detection occurs only when additional malicious behaviour follows.
+
+The goal of this test is to determine which explanation best matches the observed behaviour.
+
+***
 
 ## The Layered API Model
 
-Windows API calls do not go directly to the kernel. They pass through a stack of DLL layers, each with a different role:
+Windows API calls do not go directly to the kernel.
+
+A call such as:
+
+```c
+VirtualAllocEx(...)
+```
+
+passes through multiple layers before the operating system performs the actual allocation.
 
 ```mermaid
 flowchart TD
@@ -36,7 +72,7 @@ flowchart TD
     C["<b>kernelbase.dll</b><br/>Actual Win32 implementation<br/>Parameter validation, type translation<br/><i>Calls ntdll equivalent</i>"]
     C --> D
 
-    D["<b>ntdll.dll</b><br/>NT API layer<br/>NtAllocateVirtualMemory<br/><i>Last stop in userland — syscall stub</i>"]
+    D["<b>ntdll.dll</b><br/>NT API layer<br/>NtAllocateVirtualMemory<br/><i>Last stop in userland - syscall stub</i>"]
     D --> E
 
     E["<b>syscall instruction</b><br/>CPU transitions to kernel mode<br/>Syscall number identifies the operation"]
@@ -56,194 +92,383 @@ flowchart TD
     style E fill:#27ae60,color:#fff
 ```
 
-The layers:
+The layers can be simplified as:
 
-| Layer | DLL | What it does |
-|---|---|---|
-| Win32 forwarding | `kernel32.dll` | Mostly forwarding thunks (`48 FF 25`) into kernelbase — no real code |
-| Win32 implementation | `kernelbase.dll` | Actual parameter validation and translation; calls ntdll |
-| NT API | `ntdll.dll` | Thin syscall stubs — loads SSN and executes `syscall` |
-| Kernel | `ntoskrnl.exe` | The real implementation, running in ring 0 |
+| Layer                | Component        | Role                                 |
+| -------------------- | ---------------- | ------------------------------------ |
+| Win32 forwarding     | `kernel32.dll`   | Export compatibility layer           |
+| Win32 implementation | `kernelbase.dll` | Parameter translation and validation |
+| NT API               | `ntdll.dll`      | Syscall stubs                        |
+| Kernel               | `ntoskrnl.exe`   | Actual implementation                |
 
-> **`kernel32.dll` is mostly a thunk layer.** Since Windows 7 the real Win32 implementations live in `kernelbase.dll`. `kernel32!VirtualAllocEx` is 7 bytes: `48 FF 25 XX XX XX XX` — a single `jmp [rip+offset]` into `kernelbase!VirtualAllocEx`. This matters for hook detection: checking `kernel32.dll` only tells you about the thunk, not the real function.
+***
 
-Some EDRs hook at the **ntdll layer** — the last userland stop before the kernel. Others operate entirely in kernel mode. Understanding the difference matters, because the technique used against one approach has no effect on the other.
+### kernel32.dll Is Mostly a Forwarding Layer
 
----
+Many developers assume:
+
+```text
+VirtualAllocEx
+    ↓
+kernel32.dll
+```
+
+is the implementation.
+
+In reality, most modern exports in `kernel32.dll` are forwarding stubs that redirect execution into `kernelbase.dll`.
+
+For example:
+
+```text
+48 FF 25 XX XX XX XX
+```
+
+represents:
+
+```asm
+jmp [rip+offset]
+```
+
+The actual implementation typically lives elsewhere.
+
+This becomes important when discussing hook detection because observing the forwarding layer tells us very little about where execution ultimately goes.
+
+***
 
 ## The ntdll Syscall Stub
 
-`ntdll.dll` is the lowest userland DLL. Every Nt* function in it follows an identical pattern — a short stub that loads a hardcoded syscall number into `eax` and then executes the `syscall` instruction to drop to the kernel.
+`ntdll.dll` represents the last stop in user mode before control transitions into the kernel.
 
-Here is `NtAllocateVirtualMemory` on a clean system (no EDR):
+A typical syscall stub looks like this:
 
-```
-ntdll!NtAllocateVirtualMemory:
-  4C 8B D1          mov r10, rcx       ; copy arg1 to r10 (syscall calling convention)
-  B8 18 00 00 00    mov eax, 0x18      ; load SSN (Syscall Service Number)
-  0F 05             syscall            ; transition to kernel mode
-  C3                ret                ; return to caller
-```
+```asm
+NtAllocateVirtualMemory:
 
-Only 11 bytes. No logic, no branching — it just loads a number and drops to the kernel. The `0x18` is the **Syscall Service Number (SSN)**: an index into the kernel's System Service Descriptor Table (SSDT) that maps to the actual kernel function.
-
-The byte pattern for a clean ntdll stub is always:
-
-```
-4C 8B D1  B8 XX XX 00 00  0F 05  C3
+4C 8B D1          mov r10, rcx
+B8 18 00 00 00    mov eax, 0x18
+0F 05             syscall
+C3                ret
 ```
 
-The `XX XX` bytes vary per function (that is the SSN). Everything else is identical across all Nt* stubs.
+Only a handful of instructions exist.
 
-This predictability is exactly what makes hook detection possible — and exactly what EDRs exploit.
+The syscall stub:
 
----
+1. Moves parameters into the expected registers
+2. Loads a syscall number
+3. Executes `syscall`
+4. Returns to the caller
 
-Some EDRs — CrowdStrike Falcon, SentinelOne, Carbon Black — address this by patching the first bytes of ntdll function stubs at process start, replacing the clean `4C 8B D1 B8` prologue with a JMP into their own handler. Every Nt* call then passes through the EDR before reaching the kernel, giving it full argument inspection and blocking capability. Techniques like direct syscalls and ntdll unhooking exist specifically to bypass this mechanism. MDE takes a different approach.
+This structure is highly predictable.
 
----
+A typical clean pattern appears as:
 
-## Seeing It Live: What MDE Actually Hooks
-
-Running HookDetector on a Windows 11 system with the **Microsoft Defender for Endpoint** sensor active produces a result that contradicts the common assumption:
-
-![HookDetector HOOKED FUNCTIONS section — the 6 functions MDE patches, with byte sequences and hook types](/assets/img/posts/api-series/hookdetector-hooked.png)
-
-![HookDetector SUMMARY BY CATEGORY — Memory and Thread show 0 hooks, ETW shows 3, File shows 2, Module shows 1](/assets/img/posts/api-series/hookdetector-summary.png)
-
-The headline numbers:
-
+```text
+4C 8B D1 B8 XX XX 00 00 0F 05 C3
 ```
+
+where the syscall number varies by function.
+
+Because these stubs are small and predictable, modifications are often easy to identify.
+
+***
+
+## Why EDRs Hook ntdll
+
+Some EDR platforms intercept execution at the ntdll layer.
+
+Instead of allowing:
+
+```text
+NtAllocateVirtualMemory
+    ↓
+syscall
+    ↓
+kernel
+```
+
+they replace the beginning of the function with a jump into their own monitoring routine.
+
+Conceptually:
+
+```text
+NtAllocateVirtualMemory
+    ↓
+EDR handler
+    ↓
+syscall
+    ↓
+kernel
+```
+
+This allows the EDR to inspect arguments and observe activity before the syscall reaches the operating system.
+
+Techniques such as:
+
+* Direct syscalls
+* Syscall stub generation
+* ntdll remapping
+* ntdll unhooking
+
+exist largely to bypass this style of interception.
+
+The obvious question therefore becomes:
+
+> Is MDE actually doing this for the injection APIs?
+
+***
+
+## What MDE Appears To Hook
+
+Running HookDetector on a Windows 11 system with Defender for Endpoint enabled produced a result that challenged one of my assumptions.
+
+Rather than seeing injection-related syscall stubs patched in userland, the relevant ntdll entry points appeared clean.
+
+![HookDetector HOOKED FUNCTIONS section - the 6 functions MDE patches, with byte sequences and hook types](hookdetector-hooked.png)
+
+![HookDetector SUMMARY BY CATEGORY - Memory and Thread show 0 hooks, ETW shows 3, File shows 2, Module shows 1](hookdetector-summary.png)
+
+Headline results:
+
+```text
 [*] Total Functions Checked: 45
 [!] HOOKED Functions: 6
 [+] CLEAN Functions: 39
 ```
 
-> **Tool limitation note:** HookDetector detects hooks by checking the first bytes of each function against the expected `4C 8B D1 B8` syscall stub pattern. For ntdll functions that are *not* syscall stubs — like `EtwEventWrite` and `LdrLoadDll`, which have full implementations — any non-matching prologue is reported as `SUSPICIOUS (Modified Syscall Stub)`. Similarly, `kernel32!CreateFileA/W` starting with `FF 25` are standard **forwarding thunks** to `kernelbase.dll`, not hooks. The tool cannot distinguish between a hooked complex function and a normal one using this method alone.
+A limitation of the tool is that it cannot always distinguish a complex implementation from a hooked one.
 
-The reliable part of the output is the **syscall stub results** — those have a definitive expected pattern and the tool identifies deviations unambiguously. And those are all clean:
+The most reliable results are the syscall stubs because their expected structure is simple and well understood.
 
+The injection-related stubs examined during testing all reported clean:
+
+```text
+[CLEAN] NtAllocateVirtualMemory
+[CLEAN] NtWriteVirtualMemory
+[CLEAN] NtProtectVirtualMemory
+[CLEAN] NtCreateThreadEx
+[CLEAN] NtCreateUserProcess
 ```
-[CLEAN]  ntdll.dll!NtAllocateVirtualMemory   4C 8B D1 B8  ->  mov eax, 0x18
-[CLEAN]  ntdll.dll!NtWriteVirtualMemory       4C 8B D1 B8  ->  mov eax, 0x3A
-[CLEAN]  ntdll.dll!NtProtectVirtualMemory     4C 8B D1 B8  ->  mov eax, 0x50
-[CLEAN]  ntdll.dll!NtCreateThreadEx           4C 8B D1 B8  ->  mov eax, 0xC9
-[CLEAN]  ntdll.dll!NtCreateUserProcess        4C 8B D1 B8  ->  mov eax, 0xD1
-```
 
-**Every injection-relevant syscall stub is unmodified.** MDE has not patched the ntdll entry points for memory allocation, remote writes, or thread creation. There are no userland inline hooks on the injection API path.
+Every injection-relevant syscall stub examined during testing appeared unmodified.
+
+There were no observable inline hooks on the primary injection path.
+
+***
 
 ### The Forwarding Thunk Pattern
 
-The output also shows something worth understanding about `kernel32.dll` itself:
+The output also showed:
 
+```text
+[CLEAN] kernel32!VirtualAllocEx
+48 FF 25 ...
+
+[CLEAN] kernel32!WriteProcessMemory
+48 FF 25 ...
 ```
-[CLEAN]  kernel32.dll!VirtualAllocEx
-         Bytes: 48 FF 25 E1 6C 04 00 CC CC CC CC CC CC CC CC CC
 
-[CLEAN]  kernel32.dll!WriteProcessMemory
-         Bytes: 48 FF 25 19 96 04 00 CC CC CC CC CC CC CC CC CC
-```
+Some readers may initially interpret these jumps as hooks.
 
-These start with `48 FF 25` — `jmp QWORD PTR [rip+offset]`. These are not hooks. They are the standard **forwarding thunks** that every `kernel32.dll` export has used since Windows 7. The bytes jump into `kernelbase.dll` where the actual implementation lives. `kernel32.dll` is essentially a compatibility shim — it exports the same names for backward compatibility but contains no real code.
+They are not.
 
----
+These are standard forwarding thunks that redirect execution into `kernelbase.dll`.
 
-### What Different EDRs Hook
+This behaviour is normal and expected.
 
-MDE's kernel-first approach is not universal. Products that rely more heavily on userland hooks show a very different picture:
+The presence of a jump instruction in `kernel32.dll` is not evidence of interception.
 
-| Function | MDE | CrowdStrike / SentinelOne (typical) |
-|---|---|---|
-| `NtAllocateVirtualMemory` | **Clean** — kernel callback | Hooked (E9 JMP) |
-| `NtWriteVirtualMemory` | **Clean** — kernel callback | Hooked (E9 JMP) |
-| `NtCreateThreadEx` | **Clean** — kernel callback | Hooked (E9 JMP) |
-| `EtwEventWrite` | **Hooked** — protect telemetry | Sometimes hooked |
-| `LdrLoadDll` | **Hooked** — DLL load monitoring | Hooked |
-| `CreateFileA/W` | **Hooked** — on-access scan | Varies |
+***
 
-Unhooking ntdll removes the userland hooks from the second column. Against MDE, there is nothing to unhook for the injection APIs — because MDE was never watching there.
+## What Different EDR Approaches Look Like
 
----
+The testing environment produced roughly the following picture:
+
+| Function                  | Tested MDE System | Userland-Hooking EDR (Typical) |
+| ------------------------- | ----------------- | ------------------------------ |
+| `NtAllocateVirtualMemory` | Clean             | Often hooked                   |
+| `NtWriteVirtualMemory`    | Clean             | Often hooked                   |
+| `NtCreateThreadEx`        | Clean             | Often hooked                   |
+| `EtwEventWrite`           | Hooked            | Varies                         |
+| `LdrLoadDll`              | Hooked            | Often hooked                   |
+| `CreateFileA/W`           | Hooked            | Varies                         |
+
+The important observation is not that MDE lacks visibility.
+
+The important observation is that the visibility does not appear to originate from inline interception of the injection-related syscall stubs examined during testing.
+
+Against the tested MDE deployment there was therefore nothing to unhook on the primary syscall path because those stubs already appeared clean.
+
+***
 
 ## What This Means for an Injector
 
-Return to the four-step injector from Part 1:
+Consider the classic injection workflow:
 
+```text
+OpenProcess
+    ↓
+VirtualAllocEx
+    ↓
+WriteProcessMemory
+    ↓
+CreateRemoteThread
 ```
-VirtualAllocEx WriteProcessMemory CreateRemoteThread
-```
 
-Each of those kernel32 functions calls through kernelbase into an ntdll equivalent:
+Internally that becomes:
 
-| kernel32 | kernelbase | ntdll | MDE watches via |
-|---|---|---|---|
-| `VirtualAllocEx` | `VirtualAllocEx` | `NtAllocateVirtualMemory` | Kernel callback |
-| `WriteProcessMemory` | `WriteProcessMemory` | `NtWriteVirtualMemory` | Kernel callback |
-| `CreateRemoteThread` | `CreateRemoteThread` | `NtCreateThreadEx` | Kernel callback |
+| Win32 API            | NT API                    |
+| -------------------- | ------------------------- |
+| `VirtualAllocEx`     | `NtAllocateVirtualMemory` |
+| `WriteProcessMemory` | `NtWriteVirtualMemory`    |
+| `CreateRemoteThread` | `NtCreateThreadEx`        |
 
-The injector's every action is visible to MDE — but not because of ntdll hooks. The visibility comes from the kernel layer, where callbacks fire regardless of how the call was made: through kernel32, through a direct syscall, or through any other path.
+The operations remain observable.
 
-The import table (Part 1) tells an analyst what the binary *intends* to do. The hook and callback infrastructure tells the EDR what it *is doing*, live. These are separate detection mechanisms requiring different responses.
+The results simply suggest that visibility is being derived somewhere other than userland interception of the syscall stubs examined during testing.
 
-The practical implication: for products that use userland ntdll hooks, removing those hooks eliminates their visibility into that call. For MDE, the ntdll layer was never where it was looking.
+This distinction matters.
 
----
+An import table tells an analyst what a binary appears designed to do.
+
+Runtime telemetry records what it actually does.
+
+Alert generation is a separate step entirely.
+
+***
 
 ## The Practical Proof
 
-Analysing bytes in a tool is one thing. Running the injection is another.
+Inspecting bytes is interesting.
 
-BasicInjector was modified to remove shellcode entirely. Instead of allocating RWX memory and writing shellcode bytes, it:
+Executing the workflow is more convincing.
 
-1. Resolves `WinExec` from `kernel32.dll` at runtime using `GetProcAddress`
-2. Allocates `PAGE_READWRITE` (not RWX) memory in the target process — just enough for the string `"calc.exe\0"`
-3. Writes that string with `WriteProcessMemory`
-4. Calls `CreateRemoteThread` with `WinExec` as the start address and the string pointer as the parameter
+For this test, `BasicInjector.exe` deliberately avoided shellcode.
 
-No shellcode. No executable memory. No known byte signatures.
+Instead it:
 
-ThreatCheck on the binary before running:
+1. Resolved `WinExec` using `GetProcAddress`
+2. Allocated `PAGE_READWRITE` memory in a target process
+3. Wrote the string `"calc.exe"`
+4. Executed `WinExec("calc.exe")` through a remote thread
 
-```
+No shellcode.
+
+No executable memory allocation.
+
+No staged payload.
+
+No network activity.
+
+ThreatCheck result before execution:
+
+```text
 [+] No threat found!
-[*] Run time: 0.1s
 ```
 
-Running against notepad.exe on the MDE-protected system:
+Runtime output:
 
-```
+```text
 PS C:\> .\BasicInjector.exe
+
 [*] WinExec @ 0x7FFA92990790
 [*] Target PID: 11340
 [*] String allocated at 0x1EE738A0000
 [*] Wrote 9 bytes
-[+] Remote thread created — WinExec("calc.exe") running in notepad
+[+] Remote thread created - WinExec("calc.exe") running in notepad
 ```
 
-![BasicInjector running against notepad on MDE-protected system — calc.exe opened, Windows Security showing MDE active, no alert](/assets/img/posts/api-series/basicinjector-calc.png)
+![BasicInjector running against notepad on MDE-protected system - calc.exe opened, Windows Security showing MDE active, no alert](basicinjector-calc.png)
 
-Calc opened. MDE did not alert.
+Calculator launched successfully.
 
-The complete four-step injection sequence — `OpenProcess`, `VirtualAllocEx`, `WriteProcessMemory`, `CreateRemoteThread` — completed on an MDE-protected system with no userland hooks intercepting any call and no static signature to trigger the scanner.
+No alert was generated.
 
-**This is a foundational result, not a bypass.** The injection was benign: no shellcode, no payload, no network connection, no credential access. MDE’s kernel callbacks received the thread creation event — it was not invisible. What kept the alert from firing was the absence of any malicious behaviour following the injection. A real implant executing stage-2 code, beaconing to a C2, reading LSASS, or moving laterally would generate a cascade of kernel-level events that MDE’s behavioural model would detect — not because of the API calls themselves, but because of what they collectively accomplish.
+The complete injection workflow executed successfully:
 
-The point is that **the API calls are not the tripwire**. MDE does not maintain a simple list of banned function calls. Detection is contextual and behavioural, built from kernel telemetry that accumulates over the lifetime of the operation. Understanding that is what makes the techniques in the rest of this series meaningful: each one targets a specific layer, and knowing which layer is actually relevant changes which technique matters.
+* Process access
+* Remote memory allocation
+* Remote memory write
+* Remote thread creation
 
----
+The point is not that these activities were invisible.
+
+The point is that they occurred without producing an alert despite representing the same workflow commonly associated with process injection tooling.
+
+***
+
+## What The Result Actually Means
+
+It would be incorrect to conclude from this test that process injection is undetectable.
+
+It would also be incorrect to conclude that MDE ignores the underlying activity.
+
+The important observation is much simpler:
+
+> The API calls alone were insufficient to generate an alert on the tested system.
+
+Telemetry still existed.
+
+Events were still generated.
+
+The injection sequence was still observable.
+
+However, the operation completed without triggering a detection because no overtly malicious behaviour followed.
+
+There was:
+
+* No shellcode execution
+* No persistence
+* No credential access
+* No lateral movement
+* No command and control traffic
+
+This supports the idea that telemetry collection and detection are separate concerns.
+
+The APIs generated activity.
+
+That activity alone did not cross the threshold required to produce an alert.
+
+***
+
+## Key Takeaway
+
+The most interesting finding was not that calc.exe launched.
+
+It was that a complete process-injection workflow executed successfully despite a widely held assumption that the underlying APIs are themselves detection triggers.
+
+The experiments in Part 1 and Part 2 suggest a consistent pattern:
+
+* The imports were visible.
+* The API calls were visible.
+* Neither observation alone was sufficient to generate an alert.
+
+The import table was not the trigger.
+
+The API calls were not the trigger by themselves.
+
+The evidence instead points toward a model where telemetry is collected continuously and detections emerge from behavioural context, correlation, and subsequent activity.
+
+In short:
+
+> Visibility, telemetry, and detection are not the same thing.
+
+Understanding the difference is far more useful than assuming where a detection occurs.
+
+***
 
 ## What Comes Next
 
-Dynamic API resolution (Part 3) removes the import table entries — solving the static analysis problem from Part 1. It does not remove hooks from ntdll (the hooks are in the mapped DLL, not in your binary), and it does nothing about kernel-mode callbacks.
+Part 3 continues the research by asking a different question about visibility:
 
-Direct syscalls (Part 4) bypass userland ntdll hooks entirely by issuing the `syscall` instruction directly, without going through ntdll at all. Against products that rely on ntdll inline hooks, this removes a significant detection surface. Against MDE, the kernel callbacks still fire.
+> If the injection API calls are not the detection trigger, what telemetry is MDE actually collecting?
 
-Each technique addresses a specific layer. This post mapped those layers. The rest of the series works through them one at a time.
+The next post examines the ETW layer — the providers that feed MDE with real-time telemetry, which events fire during a typical injection workflow, and what changes when that write path is interrupted.
 
-- **[API Series Part 3: Dynamic API Resolution — PEB Walk and Custom GetProcAddress](/posts/api-series-dynamic-resolution/)** *(coming soon)*
+* **API Series Part 3: ETW and the Telemetry Layer — What MDE Actually Collects** *(coming soon)*
 
----
+***
+
 
 ## References
 
