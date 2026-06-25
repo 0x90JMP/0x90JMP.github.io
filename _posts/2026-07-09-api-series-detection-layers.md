@@ -1,6 +1,6 @@
 ---
 title: "API Series Part 3: The Network Is the Detection Surface"
-date: 2026-06-25 00:00:00 +0000
+date: 2040-06-25 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, csharp, mde, edr, behavioural-detection, static-analysis, shellcode, encryption, meterpreter, red-team]
 toc: true
