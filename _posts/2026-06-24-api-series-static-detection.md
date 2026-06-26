@@ -1,6 +1,6 @@
 ---
 title: "API Series Part 1: Do Your API Imports Get You Caught? Testing the Static Assumption"
-date: 2040-06-06 00:00:00 +0000
+date: 2026-06-06 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, csharp, pe, import-table, static-analysis, pestudio, threatcheck, defender, red-team]
 toc: true
@@ -172,7 +172,7 @@ PEStudio is designed to identify potentially suspicious characteristics without 
 
 Opening `BasicInjector.exe` immediately highlights the four injection-related imports.
 
-![PEStudio import table showing VirtualAllocEx, WriteProcessMemory, CreateRemoteThread flagged as suspicious](pestudio-imports.png)
+![PEStudio import table showing VirtualAllocEx, WriteProcessMemory, CreateRemoteThread flagged as suspicious](/assets/img/posts/api-series/pestudio-imports.png)
 
 PEStudio assigns risk scores because these APIs frequently appear in malicious tooling.
 
@@ -215,13 +215,13 @@ This removes known shellcode signatures while leaving the import table intact.
 ThreatCheck.exe -f BasicInjector.exe
 ```
 
-![ThreatCheck showing no threat found on BasicInjector with zeroed payload](threatcheck-output.png)
+![ThreatCheck showing no threat found on BasicInjector with zeroed payload](/assets/img/posts/api-series/threatcheck-output.png)
 
 Result:
 
 ```text
 [+] No threat found!
-[*] Run time: 0.09s
+[*] Run time: 0.13s
 ```
 
 This is the interesting part.
@@ -318,26 +318,34 @@ and examine where telemetry is collected, where different EDRs commonly instrume
 
 ***
 
+### Research Approach
+
+Rather than starting with assumptions about how detection works, this series takes an experimental approach: change one variable at a time and observe the result.
+
+The goal is to identify detection thresholds by determining which activities are merely observable and which activities appear to contribute meaningfully to a detection. In other words, the research asks a simple question:
+
+> At what point does collected telemetry transition from being information available to the EDR into information that contributes to an alert?
+
+Each subsequent post tests one layer of that process.
+
+***
+
 ## What Comes Next
 
 Part 2 explores the runtime question:
 
 > Does executing these APIs trigger detection?
 
-Rather than relying on assumptions, we examine the actual call path, inspect what is hooked, execute the injection workflow, and observe the result.
+We'll examine the actual call path, inspect what is hooked, execute the injection workflow, and observe the result.
 
-* **[API Series Part 2: The Windows API Call Stack and Where EDRs Hook](/posts/api-series-call-stack/)**
+* **Part 2: Testing the Runtime Assumption — Are Injection APIs Really the Trigger?**
 
 ***
 
 ## References
 
-- [PE Format — Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format)
-- [VirtualAllocEx — MSDN](https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualallocex)
-- [PEStudio — winitor.com](https://www.winitor.com/)
-- [ThreatCheck — GitHub](https://github.com/rasta-mouse/ThreatCheck)
-- [MITRE ATT&CK T1055 — Process Injection](https://attack.mitre.org/techniques/T1055/)
-
-**Related posts:**
-- [AMSI Internals Part 1: The Full Scan Pipeline](/posts/amsi-internals-scan-pipeline/)
-- [AMSI Bypass Part 2: Hardware Breakpoints](/posts/amsi-bypass-hardware-breakpoints/)
+* PE Format – Microsoft Learn
+* VirtualAllocEx – MSDN
+* PEStudio – winitor.com
+* ThreatCheck – GitHub
+* MITRE ATT\&CK T1055 – Process Injection

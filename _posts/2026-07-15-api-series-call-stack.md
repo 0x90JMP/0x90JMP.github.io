@@ -1,6 +1,6 @@
 ---
-title: "API Series Part 2: The Windows API Call Stack and Where EDRs Hook"
-date: 2040-06-24 00:00:00 +0000
+title: "API Series Part 2: Testing the Runtime Assumption – Are Injection APIs The Trigger?"
+date: 2026-06-24 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, csharp, ntdll, hooks, edr, syscall, kernel32, api-call-stack, red-team]
 toc: true
@@ -66,7 +66,7 @@ passes through multiple layers before the operating system performs the actual a
 flowchart TD
     A["<b>Your Code</b><br/>VirtualAllocEx(hProcess, ...)"] --> B
 
-    B["<b>kernel32.dll</b><br/>Forwarding thunk only<br/>48 FF 25 → kernelbase.dll<br/><i>No real implementation here</i>"]
+    B["<b>kernel32.dll</b><br/>Forwarding thunk only<br/>48 FF 25 > kernelbase.dll<br/><i>No real implementation here</i>"]
     B --> C
 
     C["<b>kernelbase.dll</b><br/>Actual Win32 implementation<br/>Parameter validation, type translation<br/><i>Calls ntdll equivalent</i>"]
@@ -224,9 +224,9 @@ Running HookDetector on a Windows 11 system with Defender for Endpoint enabled p
 
 Rather than seeing injection-related syscall stubs patched in userland, the relevant ntdll entry points appeared clean.
 
-![HookDetector HOOKED FUNCTIONS section - the 6 functions MDE patches, with byte sequences and hook types](hookdetector-hooked.png)
+![HookDetector HOOKED FUNCTIONS section - the 6 functions MDE patches, with byte sequences and hook types](/assets/img/posts/api-series/hookdetector-hooked.png)
 
-![HookDetector SUMMARY BY CATEGORY - Memory and Thread show 0 hooks, ETW shows 3, File shows 2, Module shows 1](hookdetector-summary.png)
+![HookDetector SUMMARY BY CATEGORY - Memory and Thread show 0 hooks, ETW shows 3, File shows 2, Module shows 1](/assets/img/posts/api-series/hookdetector-summary.png)
 
 Headline results:
 
@@ -378,7 +378,7 @@ PS C:\> .\BasicInjector.exe
 [+] Remote thread created - WinExec("calc.exe") running in notepad
 ```
 
-![BasicInjector running against notepad on MDE-protected system - calc.exe opened, Windows Security showing MDE active, no alert](basicinjector-calc.png)
+![BasicInjector running against notepad on MDE-protected system - calc.exe opened, Windows Security showing MDE active, no alert](/assets/img/posts/api-series/basicinjector-calc.png)
 
 Calculator launched successfully.
 
@@ -459,25 +459,18 @@ Understanding the difference is far more useful than assuming where a detection 
 
 ## What Comes Next
 
-Part 3 continues the research by asking a different question about visibility:
+Part 3 asks a different question:
 
-> If the injection API calls are not the detection trigger, what telemetry is MDE actually collecting?
+> If the imports were not the detection trigger, at what stage do we get detected?
 
-The next post examines the ETW layer — the providers that feed MDE with real-time telemetry, which events fire during a typical injection workflow, and what changes when that write path is interrupted.
-
-* **[API Series Part 3: The Network Is the Detection Surface](/posts/api-series-detection-layers/)** *(coming soon)*
+* **[API Series Part 3: Payloads, Memory, and Runtime Reality](/posts/api-series-detection-layers/)**
 
 ***
 
-
 ## References
 
-- [Windows Syscall Internals — j00ru syscall table](https://j00ru.vexillium.org/syscalls/nt/64/)
-- [NtAllocateVirtualMemory — MSDN](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntallocatevirtualmemory)
-- [Userland Hooking — modexp.wordpress.com](https://modexp.wordpress.com/2019/06/15/hook-injection/)
-- [MITRE ATT&CK T1055 — Process Injection](https://attack.mitre.org/techniques/T1055/)
-- [PE Format — Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format)
-
-**Related posts:**
-- [API Series Part 1: Do Your API Imports Get You Caught? Testing the Static Assumption](/posts/api-series-static-detection/)
-- [AMSI Internals Part 1: The Full Scan Pipeline](/posts/amsi-internals-scan-pipeline/)
+* Windows Syscall Internals – j00ru syscall table
+* NtAllocateVirtualMemory – Microsoft Learn
+* MITRE ATT\&CK T1055 – Process Injection
+* PE Format – Microsoft Learn
+* Userland Hooking – modexp.wordpress.com
