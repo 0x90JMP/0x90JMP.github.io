@@ -354,21 +354,42 @@ That distinction appears to matter.
 
 ## What Comes Next
 
-The first three posts have progressively narrowed the question:
+The first three posts have progressively challenged common assumptions about where detections originate.
 
-* Part 1 examined static imports.
-* Part 2 examined runtime API execution.
-* Part 3 examined payload content and runtime memory visibility.
+Part 1 found that imports alone were insufficient to trigger a static detection.
 
-The next logical question is:
+Part 2 found that classic process-injection APIs executed successfully despite commonly being described as detection triggers.
 
-> What telemetry becomes available after code execution is obtained?
+Part 3 found that payload content and runtime visibility had a far greater impact on detection outcomes than the injection workflow used to deliver them.
 
-Part 4 will focus on the runtime characteristics of payloads and the telemetry generated after successful execution, with the goal of continuing the investigation into where meaningful detections are actually being produced. 
+However, further investigation revealed something unexpected.
 
-We will address what the research found across Parts 1 through 3: A process that passes static analysis, does not load a known payload into memory at runtime, and communicates over a channel that does not match known C2 patterns.
+Although the injection activity completed successfully, Microsoft Defender XDR had recorded detailed telemetry describing the operation, including remote memory manipulation, remote thread creation, executable memory allocation, and process injection activity.
 
-* **/posts/api-series-runtime-telemetry/** *(coming soon)*
+This raises a new question:
+
+> If the injection-related syscall stubs appeared unmodified, where did this telemetry come from?
+
+The next stage of the research is no longer asking whether the activity was visible.
+
+The telemetry shows that it was.
+
+Instead, the question becomes:
+
+> How does MDE observe process injection activity, and which telemetry sources contribute to those observations?
+
+Understanding the answer is important because visibility, alerting, and prevention appear to be distinct stages within the detection pipeline.
+
+The injection activity generated telemetry.
+
+The telemetry generated alerts.
+
+Yet the activity still completed successfully.
+
+Determining how MDE collected that information—and why it sometimes leads to prevention and sometimes does not—is the next logical step in understanding where detection thresholds actually exist.
+
+* **Part 4: If The APIs Weren't Hooked, How Did MDE Know?** *(coming soon)*
+
 
 ***
 
