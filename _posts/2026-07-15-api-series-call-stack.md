@@ -474,3 +474,7 @@ Part 3 asks a different question:
 * MITRE ATT\&CK T1055 – Process Injection
 * PE Format – Microsoft Learn
 * Userland Hooking – modexp.wordpress.com
+
+## Acknowledgements
+
+Parts of this article were reviewed with the assistance of Microsoft Copilot. Copilot was used as an editorial and review tool to challenge assumptions, improve clarity, and refine conclusions. All research, coding, testing, screenshots, and experimental results were performed and validated by the author.
