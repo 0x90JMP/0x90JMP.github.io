@@ -477,4 +477,4 @@ Part 3 asks a different question:
 
 ## Acknowledgements
 
-Parts of this article were reviewed with the assistance of Microsoft Copilot. Copilot was used as an editorial and review tool to challenge assumptions, improve clarity, and refine conclusions. All research, coding, testing, screenshots, and experimental results were performed and validated by the author.
+Parts of this article were reviewed with the assistance of Microsoft Copilot. Copilot was used as an editorial and review tool to challenge assumptions, improve clarity, and refine conclusions. All research, tool development, testing, screenshots, and experimental results were performed and validated by the author.

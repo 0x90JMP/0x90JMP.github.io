@@ -400,3 +400,5 @@ EDR is a critical control. It is not a complete identity security strategy.
 *   T1550.001 – Use Alternate Authentication Material: Application Access Token
 *   T1555.003 – Credentials from Password Stores
 *   T1539 – Steal Web Session Cookie
+
+Parts of this article were reviewed with the assistance of Microsoft Copilot. Copilot was used as an editorial and review tool to challenge assumptions, improve clarity, and refine conclusions. All research, tool development, testing, screenshots, and experimental results were performed and validated by the author.
