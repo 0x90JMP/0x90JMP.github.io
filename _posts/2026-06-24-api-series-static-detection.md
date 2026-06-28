@@ -237,7 +237,7 @@ CreateRemoteThread
 
 Yet Defender did not generate a signature hit.
 
-The imports clearly contributed to PEStudio's risk scoring, but they were not sufficient to trigger Defender's static engine.
+The imports clearly contributed to PEStudio's risk scoring, but during testing they were not sufficient to trigger Defender's static engine.
 
 The two tools are answering different questions.
 
@@ -344,11 +344,11 @@ We'll examine the actual call path, inspect what is hooked, execute the injectio
 
 ## References
 
-* PE Format – Microsoft Learn
-* VirtualAllocEx – MSDN
-* PEStudio – winitor.com
-* ThreatCheck – GitHub
-* MITRE ATT\&CK T1055 – Process Injection
+* [PE Format - Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format)
+* [VirtualAllocEx - Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualallocex)
+* [PEStudio - winitor.com](https://www.winitor.com/)
+* [ThreatCheck - GitHub](https://github.com/rasta-mouse/ThreatCheck)
+* [MITRE ATT&CK T1055 - Process Injection](https://attack.mitre.org/techniques/T1055/)
 
 ## Acknowledgements
 

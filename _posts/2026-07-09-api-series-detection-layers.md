@@ -26,7 +26,7 @@ By progressively isolating variables, we can begin building a picture of where d
 
 Parts 1 and 2 tested two assumptions about where detection fires.
 
-Part 1 found that API imports alone do not trigger Defender's static engine. Part 2 found that on the tested MDE deployment, the injection-related ntdll syscall stubs appeared unmodified and the classic injection APIs executed without generating an alert.
+Part 1 found that API imports alone did not trigger Defender's static engine on the tested deployment. Part 2 found that on the tested MDE deployment, the injection-related ntdll syscall stubs appeared unmodified and the classic injection APIs executed without generating an alert.
 
 Both results pointed toward the same conclusion:
 
@@ -164,7 +164,7 @@ The injector completed successfully and launched calc.exe.
 
 ### Finding
 
-Encrypting the payload removed the identifiable static signature.
+Encrypting the payload did not produce a signature match at the time of testing.
 
 More importantly, the resulting runtime behaviour did not generate an alert on the tested system.
 
@@ -261,7 +261,7 @@ The network connection itself was not immediately blocked.
 
 The injection sequence itself was not immediately blocked.
 
-The detection occurred after the meterpreter stage became resident within the target process memory.
+The timing of the detection suggested it occurred after the meterpreter stage became resident within the target process memory.
 
 ***
 
@@ -364,29 +364,21 @@ Part 3 found that payload content and runtime visibility had a far greater impac
 
 However, further investigation revealed something unexpected.
 
-Although the injection activity completed successfully, Microsoft Defender XDR had recorded detailed telemetry describing the operation, including remote memory manipulation, remote thread creation, executable memory allocation, and process injection activity.
+After testing, a Microsoft Defender XDR event timeline was exported for the BasicInjector binary. That timeline contained detailed telemetry describing every injection operation performed during testing - remote memory allocation, remote thread creation, executable memory allocation, and process injection events - each logged with the specific API calls involved.
 
-This raises a new question:
+This was not anticipated.
 
-> If the injection-related syscall stubs appeared unmodified, where did this telemetry come from?
+The syscall stubs had appeared unmodified. The injection APIs had completed without generating an immediate alert. Yet MDE had recorded every operation in detail, including `ProcessInjectionApiEvent` entries naming `VirtualAlloc` and `CreateRemoteThread` explicitly.
 
-The next stage of the research is no longer asking whether the activity was visible.
+That finding changed the direction of the research.
 
-The telemetry shows that it was.
+The question is no longer whether the activity was visible. The telemetry shows that it was.
 
-Instead, the question becomes:
+The question is:
 
-> How does MDE observe process injection activity, and which telemetry sources contribute to those observations?
+> If the injection-related syscall stubs appeared unmodified, where did that telemetry come from?
 
-Understanding the answer is important because visibility, alerting, and prevention appear to be distinct stages within the detection pipeline.
-
-The injection activity generated telemetry.
-
-The telemetry generated alerts.
-
-Yet the activity still completed successfully.
-
-Determining how MDE collected that information—and why it sometimes leads to prevention and sometimes does not—is the next logical step in understanding where detection thresholds actually exist.
+Part 4 investigates the telemetry sources available to Microsoft Defender for Endpoint and explores how MDE is able to identify process injection activity even when the primary userland syscall path appears clean. It focuses on the runtime characteristics of payloads and the telemetry generated after successful execution - and on why visibility, alerting, and prevention appear to behave as distinct stages within the same detection pipeline.
 
 * **Part 4: If The APIs Weren't Hooked, How Did MDE Know?** *(coming soon)*
 
@@ -395,10 +387,10 @@ Determining how MDE collected that information—and why it sometimes leads to p
 
 ## References
 
-* [MITRE ATT&CK T1055 — Process Injection](https://attack.mitre.org/techniques/T1055/)
-* [MITRE ATT&CK T1027 — Obfuscated Files or Information](https://attack.mitre.org/techniques/T1027/)
-* [msfvenom — Metasploit Framework](https://docs.metasploit.com/docs/using-metasploit/basics/how-to-use-msfvenom.html)
-* [ThreatCheck — GitHub](https://github.com/rasta-mouse/ThreatCheck)
+* [MITRE ATT&CK T1055 - Process Injection](https://attack.mitre.org/techniques/T1055/)
+* [MITRE ATT&CK T1027 - Obfuscated Files or Information](https://attack.mitre.org/techniques/T1027/)
+* [msfvenom - Metasploit Framework](https://docs.metasploit.com/docs/using-metasploit/basics/how-to-use-msfvenom.html)
+* [ThreatCheck - GitHub](https://github.com/rasta-mouse/ThreatCheck)
 
 **Related posts:**
 

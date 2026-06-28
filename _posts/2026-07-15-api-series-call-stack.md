@@ -1,5 +1,5 @@
 ---
-title: "API Series Part 2: Testing the Runtime Assumption – Are Injection APIs The Trigger?"
+title: "API Series Part 2: Testing the Runtime Assumption - Are Injection APIs The Trigger?"
 date: 2026-06-24 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, csharp, ntdll, hooks, edr, syscall, kernel32, api-call-stack, red-team]
@@ -443,15 +443,15 @@ The experiments in Part 1 and Part 2 suggest a consistent pattern:
 * The API calls were visible.
 * Neither observation alone was sufficient to generate an alert.
 
-The import table was not the trigger.
+On the tested system, the import table did not appear to be the trigger.
 
-The API calls were not the trigger by themselves.
+The API calls did not appear to be the trigger by themselves.
 
 The evidence instead points toward a model where telemetry is collected continuously and detections emerge from behavioural context, correlation, and subsequent activity.
 
 In short:
 
-> Visibility, telemetry, and detection are not the same thing.
+> On the tested deployment, visibility, telemetry, and detection appeared to be distinct concerns.
 
 Understanding the difference is far more useful than assuming where a detection occurs.
 
@@ -469,12 +469,12 @@ Part 3 asks a different question:
 
 ## References
 
-* Windows Syscall Internals – j00ru syscall table
-* NtAllocateVirtualMemory – Microsoft Learn
-* MITRE ATT\&CK T1055 – Process Injection
-* PE Format – Microsoft Learn
-* Userland Hooking – modexp.wordpress.com
-* 
+* [Windows X86-64 Syscall Table - j00ru](https://j00ru.vexillium.org/syscalls/nt/64/)
+* [NtAllocateVirtualMemory - Microsoft Learn](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntallocatevirtualmemory)
+* [MITRE ATT&CK T1055 - Process Injection](https://attack.mitre.org/techniques/T1055/)
+* [PE Format - Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format)
+* [modexp.wordpress.com - Windows internals and offensive research](https://modexp.wordpress.com/)
+
 ## Acknowledgements
 
 Parts of this article were reviewed with the assistance of Microsoft Copilot. Copilot was used as an editorial and review tool to challenge assumptions, improve clarity, and refine conclusions. All research, tool development, testing, screenshots, and experimental results were performed and validated by the author.
