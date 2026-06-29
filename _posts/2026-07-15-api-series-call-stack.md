@@ -224,7 +224,7 @@ Running HookDetector on a Windows 11 system with Defender for Endpoint enabled p
 
 Rather than seeing injection-related syscall stubs patched in userland, the relevant ntdll entry points appeared clean.
 
-![HookDetector HOOKED FUNCTIONS section - the 6 functions MDE patches, with byte sequences and hook types](/assets/img/posts/api-series/hookdetector-hooked.png)
+![HookDetector HOOKED FUNCTIONS section - the 6 functions MDE patches, with byte sequences and hook types](/assets/img/posts/api-series/api-series/hookdetector-hooked.png)
 
 ![HookDetector SUMMARY BY CATEGORY - Memory and Thread show 0 hooks, ETW shows 3, File shows 2, Module shows 1](/assets/img/posts/api-series/hookdetector-summary.png)
 
