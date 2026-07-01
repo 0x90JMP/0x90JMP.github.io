@@ -1,5 +1,5 @@
 ---
-title: "API Series Part 3: Payloads, Memory, and Runtime Reality"
+title: "EDR Series Part 3: Payloads, Memory, and Runtime Reality"
 date: 2026-06-25 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, csharp, mde, edr, behavioural-detection, static-analysis, shellcode, encryption, meterpreter, red-team]

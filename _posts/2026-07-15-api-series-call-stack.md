@@ -1,5 +1,5 @@
 ---
-title: "API Series Part 2: Testing the Runtime Assumption - Are Injection APIs The Trigger?"
+title: "EDR Series Part 2: Testing the Runtime Assumption - Are Injection APIs The Trigger?"
 date: 2026-06-24 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, csharp, ntdll, hooks, edr, syscall, kernel32, api-call-stack, red-team]

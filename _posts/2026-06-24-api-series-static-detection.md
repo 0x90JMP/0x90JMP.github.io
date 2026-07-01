@@ -1,5 +1,5 @@
 ---
-title: "API Series Part 1: Do Your API Imports Get You Caught? Testing the Static Assumption"
+title: "EDR Series Part 1: Do Your API Imports Get You Caught? Testing the Static Assumption"
 date: 2026-06-06 00:00:00 +0000
 categories: [Windows Internals, API Series]
 tags: [windows, csharp, pe, import-table, static-analysis, pestudio, threatcheck, defender, red-team]
