@@ -1,6 +1,6 @@
 ---
 title: "Stealing Azure Tokens"
-date: 2040-06-18 00:00:00 +0000
+date: 2026-06-18 00:00:00 +0000
 categories: [Active Directory, Lateral Movement]
 tags: [azure, entra-id, oauth2, token-theft, dpapi, bof, havoc, microsoft-graph, mfa-bypass, windows, red-team]
 toc: true
