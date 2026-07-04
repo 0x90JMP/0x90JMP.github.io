@@ -10,13 +10,13 @@ toc: true
 
 ## Persistent Tokens
 
-Multi‑factor authentication (MFA) is now standard. Password complexity policies are enforced. NTLM is being phased out. The implicit assumption behind all of this is that the attacker is trying to get your password—when in fact, they don’t need it.
+Multi‑factor authentication (MFA) is now standard. Password complexity policies are enforced. NTLM is being phased out. The implicit assumption behind all of this is that the attacker is trying to get your password-when in fact, they don’t need it.
 
 Modern enterprise identity is built on OAuth 2.0 bearer tokens.
 
-Think of a bearer token like a wristband at a concert. Once you’ve shown your ticket and ID at the door (your password and MFA code), you get a wristband. From that point on, nobody checks your ID again—they just check the wristband. If someone steals your wristband, they can walk back in as you.
+Think of a bearer token like a wristband at a concert. Once you’ve shown your ticket and ID at the door (your password and MFA code), you get a wristband. From that point on, nobody checks your ID again-they just check the wristband. If someone steals your wristband, they can walk back in as you.
 
-When a user signs into Microsoft 365 via Entra ID (formerly Azure Active Directory), Windows doesn’t just validate their credentials and forget them. It saves the resulting tokens—access tokens, refresh tokens, and session cookies—directly to disk, protected with a Windows encryption mechanism tied to that user account.
+When a user signs into Microsoft 365 via Entra ID (formerly Azure Active Directory), Windows doesn’t just validate their credentials and forget them. It saves the resulting tokens-access tokens, refresh tokens, and session cookies-directly to disk, protected with a Windows encryption mechanism tied to that user account.
 
 These tokens are valid for hours or days. They bypass MFA entirely, because MFA has already occurred. They may be usable from any IP address unless restricted by Conditional Access or Continuous Access Evaluation (CAE) policies. They do not generate password‑based alerts.
 
@@ -30,11 +30,11 @@ Every Windows machine where a user has ever signed into Teams, Outlook, the Azur
 
 Before any token theft can occur, the attacker needs to be running code on the victim’s machine.
 
-In this scenario, that starts with a phishing email. A convincing message arrives—perhaps impersonating an IT helpdesk, a delivery notification, or an internal HR update. The victim clicks a link or opens an attachment, which executes a file in the background.
+In this scenario, that starts with a phishing email. A convincing message arrives-perhaps impersonating an IT helpdesk, a delivery notification, or an internal HR update. The victim clicks a link or opens an attachment, which executes a file in the background.
 
 In our example, the file that gets executed is a C2 agent: a small program that quietly connects back to the attacker’s server and waits for instructions. From this point on, the attacker can remotely execute commands on the victim’s machine without the victim being aware.
 
-The agent disguises itself with a legitimate‑sounding process name—in this case, `MicrosoftEdgeUpdate.exe`. This is a process that would normally appear on any Windows machine, making it far less likely to attract attention.
+The agent disguises itself with a legitimate‑sounding process name-in this case, `MicrosoftEdgeUpdate.exe`. This is a process that would normally appear on any Windows machine, making it far less likely to attract attention.
 
 *The malicious `MicrosoftEdgeUpdate.exe` process running on the victim’s system (PID `19932`).*
 
@@ -66,7 +66,7 @@ No new file written to disk.
 *   Results are returned over the existing C2 channel
 *   The BOF removes itself from memory
 
-From Windows’ perspective, the entire credential harvest occurs *inside* `MicrosoftEdgeUpdate.exe`—a process that was already running and already trusted.
+From Windows’ perspective, the entire credential harvest occurs *inside* `MicrosoftEdgeUpdate.exe`-a process that was already running and already trusted.
 
 ***
 
@@ -92,7 +92,7 @@ When Windows applications want to store a token, they use DPAPI to encrypt it. W
 
 The critical detail is that the encryption key is derived from the *currently logged‑in user’s* credentials.
 
-This means that **any process running in that user’s context can request decryption**—no password prompt, no administrative rights required.
+This means that **any process running in that user’s context can request decryption**-no password prompt, no administrative rights required.
 
 ```c
 // Any process running as the user can call this.
@@ -125,7 +125,7 @@ The entire operation takes only seconds. There is no interaction with Microsoft 
 
 ## What Attackers Do With Stolen Tokens
 
-Bearer tokens are immediately usable. No cracking, no further exploitation—the token *is* the credential.
+Bearer tokens are immediately usable. No cracking, no further exploitation-the token *is* the credential.
 
 ### Default Azure CLI Behaviour: Azure Resource Manager Access
 
@@ -149,7 +149,7 @@ The scope of access is entirely dictated by the victim’s **Azure RBAC role ass
 
 | Victim Azure Role      | Token Capability                                                        |
 | ---------------------- | ----------------------------------------------------------------------- |
-| Owner / Contributor    | Full resource read/write — VM control, storage, networking, deployments |
+| Owner / Contributor    | Full resource read/write - VM control, storage, networking, deployments |
 | Reader                 | Complete infrastructure enumeration across the subscription             |
 | Key Vault Officer      | Key Vault management actions (secret values require a separate token)   |
 | No subscription access | ARM token has no meaningful scope                                       |
@@ -168,7 +168,7 @@ Their value lies in the **enumeration window**-the ability to map the organisati
 
 ### The Azure CLI Refresh Token Kill Chain
 
-The TokenBroker and IdentityCache stores primarily contain **access tokens**. Access tokens expire-typically within 60–90 minutes—and whatever access they provide terminates at expiry.
+The TokenBroker and IdentityCache stores primarily contain **access tokens**. Access tokens expire-typically within 60–90 minutes-and whatever access they provide terminates at expiry.
 
 Store 3 (`msal_token_cache.bin`) is different.
 
@@ -186,7 +186,7 @@ This protection is bypassed when authentication occurs via the **device code flo
 az login --use-device-code
 ```
 
-Using an HTTP-based authentication path causes the Azure CLI to write the full token set—including the refresh token-to `msal_token_cache.bin`. Any developer, DevOps engineer, or cloud administrator who has authenticated this way has written a persistent, opaque, non‑expiring secret to disk.
+Using an HTTP-based authentication path causes the Azure CLI to write the full token set-including the refresh token-to `msal_token_cache.bin`. Any developer, DevOps engineer, or cloud administrator who has authenticated this way has written a persistent, opaque, non‑expiring secret to disk.
 
 ![Azure CLI device code flow authentication writing refresh token to msal_token_cache.bin](/assets/img/posts/stealing-azure-tokens/09.png)
 
@@ -214,7 +214,7 @@ Microsoft returns a valid Microsoft Graph access token. Because the victim accou
 Using the Graph access token, a persistent backdoor account can be created directly from the attacker’s system:
 
 ```bash
-# Step 1: Create user — HTTP 201 Created
+# Step 1: Create user - HTTP 201 Created
 curl -X POST https://graph.microsoft.com/v1.0/users \
   -H "Authorization: Bearer <graph_token>" \
   -H "Content-Type: application/json" \
@@ -230,7 +230,7 @@ curl -X POST https://graph.microsoft.com/v1.0/users \
 ```
 
 ```bash
-# Step 2: Assign Global Administrator role — HTTP 204 No Content
+# Step 2: Assign Global Administrator role - HTTP 204 No Content
 curl -X POST https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments \
   -H "Authorization: Bearer <graph_token>" \
   -H "Content-Type: application/json" \
@@ -298,7 +298,7 @@ curl -s \
      {(.Key): .Value}'
 ```
 
-Sites, URLs, and owners are returned from an attacker‑controlled machine—without a browser, without MFA prompts, and without sign‑in events appearing in Entra audit logs.
+Sites, URLs, and owners are returned from an attacker‑controlled machine-without a browser, without MFA prompts, and without sign‑in events appearing in Entra audit logs.
 
 *From the command line terminal we see the Microsoft SharePoint API call succeeding with a stolen token. The victim's data is returned with no authentication prompt.*
 
@@ -322,13 +322,13 @@ Summary of recovered tokens across TokenBroker and IdentityCache:
 | Microsoft Edge | `aadrm.com` | `user_impersonation` (Azure Rights Management) | Valid |
 | Microsoft Edge | Copilot service | `CopilotSettings.ReadWrite`, `CopilotEligibility.Read` | Valid |
 | OneDrive SyncEngine | `graph.microsoft.com` | `Files.Read`, `Sites.Read.All`, `Directory.Read.All` | Valid |
-| **Azure CLI** | `management.core.windows.net` | — | Valid (×2 AccessToken) |
-| **Azure CLI** | — | — | IdToken (×2) |
-| **Azure CLI** | `graph.microsoft.com/.default` | Full tenant admin (victim is Global Administrator) | **RefreshToken — no expiry** |
+| **Azure CLI** | `management.core.windows.net` | - | Valid (×2 AccessToken) |
+| **Azure CLI** | - | - | IdToken (×2) |
+| **Azure CLI** | `graph.microsoft.com/.default` | Full tenant admin (victim is Global Administrator) | **RefreshToken - no expiry** |
 
 One entry is worth calling out explicitly: the **Graph CLI Tools token had been expired for approximately two weeks, yet remained unchanged in the cache**.
 
-MSAL does not purge expired tokens. While expired tokens cannot be replayed, they still reveal client IDs, scopes, and historical access patterns—making long‑term token archaeology possible.
+MSAL does not purge expired tokens. While expired tokens cannot be replayed, they still reveal client IDs, scopes, and historical access patterns-making long‑term token archaeology possible.
 
 ***
 
@@ -364,7 +364,7 @@ PIM eliminates standing privilege. Even if a token is stolen, its impact is limi
 
 ### Phishing Awareness
 
-Identity controls reduce *impact*. Phishing awareness reduces *probability*. Token theft is a post‑exploitation technique—it only applies after initial compromise.
+Identity controls reduce *impact*. Phishing awareness reduces *probability*. Token theft is a post‑exploitation technique-it only applies after initial compromise.
 
 ***
 
