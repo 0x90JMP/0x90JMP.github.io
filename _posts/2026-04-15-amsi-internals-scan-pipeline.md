@@ -262,7 +262,8 @@ The full implementation - DR7 enable bit layout, `SetThreadContext` from a threa
 - [AmsiScanBuffer - MSDN](https://learn.microsoft.com/en-us/windows/win32/api/amsi/nf-amsi-amsiscanbuffer)
 - [Frida JavaScript API reference](https://frida.re/docs/javascript-api/)
 - [MITRE ATT&CK T1562.001 - Disable or Modify Tools](https://attack.mitre.org/techniques/T1562/001/)
-- [Hardware breakpoints for evasion - modexp](https://modexp.wordpress.com/2019/06/15/4172/)
+- OSEP
+
 
 **Related posts:**
 - [Stealing Azure Tokens](/posts/stealing-azure-tokens-template/)
