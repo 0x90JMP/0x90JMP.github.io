@@ -16,7 +16,7 @@ Then open `http://localhost:4000`.
 
 ## Deployment
 
-Push to `main` — GitHub Actions builds and deploys automatically via `.github/workflows/pages-deploy.yml`.
+Push to `main` - GitHub Actions builds and deploys automatically via `.github/workflows/pages-deploy.yml`.
 
 In your GitHub repo settings: **Pages → Source → GitHub Actions**.
 
