@@ -268,3 +268,8 @@ The full implementation - DR7 enable bit layout, `SetThreadContext` from a threa
 **Related posts:**
 - [Stealing Azure Tokens](/posts/stealing-azure-tokens-template/)
 - [AMSI Bypass Part 2: Hardware Breakpoints](/posts/amsi-bypass-hardware-breakpoints/)
+
+
+## Acknowledgements
+
+Parts of this article were reviewed with the assistance of Microsoft Copilot. Copilot was used as an editorial and review tool to challenge assumptions, improve clarity, and refine conclusions. All research, tool development, testing, screenshots, and experimental results were performed and validated by the author.
